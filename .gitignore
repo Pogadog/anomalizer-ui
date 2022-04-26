@@ -1,0 +1,20 @@
+node_modules/
+.expo/
+.dfx/
+dist/
+npm-debug.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+dfx-build/
+dockerToken
+dockerTarget
+dockerUsername
+canister_ids.json
+
+# macOS
+.DS_Store

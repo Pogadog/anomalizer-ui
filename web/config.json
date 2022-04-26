@@ -1,0 +1,6 @@
+{
+    "port": 3001,
+    "endpoint": "localhost:8057",
+    "useArtificialLatency": true
+}
+
