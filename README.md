@@ -8,7 +8,7 @@ With its grid-based design and similar metrics feature, the Anomalizer UI aims t
 
 With split-pane views, actionable features, and quick filter mechanisms, the Anomalizer UI helps you find metrics that are important, faster.
 
-The Anomalizer UI follows the *dark cockpit* aircraft design philosophy with its presentation of metrics. Originally developed by Airbus in the 1980s, the dark cockpit design means that, in an aircraft cockpit, the only indicator lights that are on are ones you need to know about, allowing you to detect problems with your aircraft within a fraction of a second. The Anomalizer UI has utilized this philosophy by visually highlighting metrics you need to know about on its main page, allowing you to identify issues in your system within a fraction of a second.
+The Anomalizer UI follows the Airbus [*dark cockpit*](https://www.icao.int/ESAF/Documents/meetings/2017/AFI%20FOSAS%202017/Day%201%20Docs/Day_1_2_Airbuspihlo.pdf) aircraft design philosophy with its presentation of metrics by visually highlighting metrics you need to know about on its main page, allowing you to identify issues in your system within a fraction of a second.
 
 More details on what features can be used with the Anomalizer can be found in its co-dependent repository [here](https://github.com/pogadog/anomalizer) (more about that below).
 
