@@ -1,9 +1,29 @@
-# Anomalizer UI by Pogadog
+# Anomalizer UI by Pogadog [Prototype]
 
-Needed:
-- Expo cli : latest
-- Npm : latest
+This is the user-interface component of the [Anomalizer](https://github.com/pogadog/anomalizer), which provides Prometheus anomaly visualization.
+
+Written in React-Native with the Expo infrastructure, the Anomalizer UI is a versatile application. Using mobile-first development paradigms, the Anomalizer UI has a clean and fluid UI that currently runs on Web, with the potential to run on Android and iOS as well.
+
+With its grid-based design and similar metrics feature, the Anomalizer UI aims to create the perfect balance of computer intelligence and the human eye to help find anomalies within your system.
+
+With split-pane views, actionable features, and quick filter mechanisms, the Anomalizer UI helps you find metrics that are important, faster.
+
+The Anomalizer UI follows the *dark cockpit* aircraft design philosophy with its presentation of metrics. Originally developed by Airbus in the 1980s, the dark cockpit design means that, in an aircraft cockpit, the only indicator lights that are on are ones you need to know about, allowing you to detect problems with your aircraft within a fraction of a second. The Anomalizer UI has utilized this philosophy by visually highlighting metrics you need to know about on its main page, allowing you to identify issues in your system within a fraction of a second.
+
+More details on what features can be used with the Anomalizer can be found in its co-dependent repository [here](https://github.com/pogadog/anomalizer) (more about that below).
+
+# Co-dependents
+
+This project is not standalone; it requires the Anomalizer server, which can be boostrapped through its Github project [here](https://github.com/pogadog/anomalizer). 
+
+The Anomalizer server `docker-compose` method contains a Docker image of this project, so you shouldn't need to install this project separately to run it. However, development instructions are below.
+
+# Development
+
+Libraries Needed:
 - Node : >=16
+- Npm : latest (should come with Node)
+- Expo cli : latest (`npm install --save expo-cli`)
 
 To run in a development environment:
 - Clone
