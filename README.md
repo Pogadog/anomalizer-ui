@@ -2,13 +2,13 @@
 
 This is the user-interface component of the [Anomalizer](https://github.com/pogadog/anomalizer), which provides Prometheus anomaly visualization.
 
-Written in React-Native with the Expo infrastructure, the Anomalizer UI is a versatile application. Using mobile-first development paradigms, the Anomalizer UI has a clean and fluid UI that currently runs on Web, with the potential to run on Android and iOS as well.
+Written in React-Native with Expo infrastructure, the Anomalizer UI is a versatile application. Using mobile-first development paradigms, the Anomalizer UI has a clean and fluid UI that currently runs on Web, with the potential to run on Android and iOS as well.
 
 With its grid-based design and similar metrics feature, the Anomalizer UI aims to create the perfect balance of computer intelligence and the human eye to help find anomalies within your system.
 
 With split-pane views, actionable features, and quick filter mechanisms, the Anomalizer UI helps you find metrics that are important, faster.
 
-The Anomalizer UI follows the Airbus [*dark cockpit*](https://www.icao.int/ESAF/Documents/meetings/2017/AFI%20FOSAS%202017/Day%201%20Docs/Day_1_2_Airbuspihlo.pdf) aircraft design philosophy with its presentation of metrics by visually highlighting metrics you need to know about on its main page, allowing you to identify issues in your system within a fraction of a second.
+The Anomalizer UI follows the Airbus [*dark cockpit*](https://www.icao.int/ESAF/Documents/meetings/2017/AFI%20FOSAS%202017/Day%201%20Docs/Day_1_2_Airbuspihlo.pdf) aircraft design philosophy with its presentation of metrics by visually highlighting metrics you need to know about on its main page, allowing you to identify anomalies in your system within a fraction of a second.
 
 More details on what features can be used with the Anomalizer can be found in its co-dependent repository [here](https://github.com/pogadog/anomalizer) (more about that below).
 
