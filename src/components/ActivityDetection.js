@@ -5,15 +5,21 @@ export default class ActivityDetection {
     constructor(minutes=15) {
         this.timeLimit = minutes * 60 * 1000;
         this.timeout;
+        this.moveDelta = 0;
         if (Platform.OS === 'web') {
             document.onmousemove = this.resetActivityTimeout;
         }
     }
 
     resetActivityTimeout = () => {
-        clearTimeout(this.timeout);
-        this.onActivity();
-        this.start();
+        this.moveDelta++;
+        if (this.moveDelta > 15) {
+            clearTimeout(this.timeout);
+            this.onActivity();
+            this.start();
+            this.moveDelta = 0;
+        }
+        
     }
 
     start = () => {
