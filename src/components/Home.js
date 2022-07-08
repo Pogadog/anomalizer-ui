@@ -758,7 +758,7 @@ class Home extends Component {
                     if (!presetMatch) continue;
                 }
 
-                let weight = (this.state.metricWeightPreference === 'rstd' ? chart.stats.rstd : this.state.metricWeightPreference === 'mean' ? chart.stats.mean : chart.stats.std) + Math.abs((chart.features.increasing?.increase ?? 0) + (chart.features.decreasing?.decrease ?? 0)) + (Math.abs(chart.features.hockeystick?.increasing || chart.features.hockeystick?.increasing || 0));  
+                let weight = (this.state.metricWeightPreference === 'alpha' ? -chart.metric.charCodeAt(0) : this.state.metricWeightPreference === 'rstd' ? chart.stats.rstd : this.state.metricWeightPreference === 'mean' ? chart.stats.mean : chart.stats.std) + Math.abs((chart.features.increasing?.increase ?? 0) + (chart.features.decreasing?.decrease ?? 0)) + (Math.abs(chart.features.hockeystick?.increasing || chart.features.hockeystick?.increasing || 0));  
 
                 chartStates[chart.status].push({...chart, id: chartId, weight});
 
@@ -1023,6 +1023,10 @@ class Home extends Component {
                     {
                         id: 'std',
                         name: 'By STD'
+                    },
+                    {
+                        id: 'alpha',
+                        name: 'By A-Z'
                     }
 
                 ]} currentOption={this.state.metricWeightPreference} onOptionChange={option => {
