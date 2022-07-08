@@ -1,4 +1,6 @@
-{
+import firebaseWeb from './src/etc/firebase.web';
+
+export default {
   "expo": {
     "name": "Anomalizer",
     "slug": "anomalizer", 
@@ -21,7 +23,10 @@
       }
     },
     "web": {
-      "favicon": "./src/images/logo.png"
+      "favicon": "./src/images/logo.png",
+      "config": {
+        "firebase": firebaseWeb
+      }
     }
   }
 }

@@ -25,10 +25,21 @@ Libraries Needed:
 - Npm : latest (should come with Node)
 - Expo cli : latest (`npm install --save expo-cli`)
 
+### NPM Peer Dependency Notice
+The latest versions of NPM have a new form of peer dependency handling where if there is a conflict of peer dependency versions, it will refuse to install anything. Most of these peer dependency errors are from libraries deeply nested in other libraries used by this project; it's an ongoing task to resolve all of these conflicts, and the project should work fine. As a work-around, anytime you want to install anything using `npm install`, add the `--legacy-peer-deps` flag to safely ignore the peer dependency errors for now.
+
 To run in a development environment:
 - Clone
 - `cd anomalizer-ui`
 - `npm install`
+- **NEW:** Create a `./src/etc/firebase.web.ts` file with your firebase web configuration. The file contents should look like this:
+```js
+module.exports = {
+    apiKey: "...",
+    ...
+    measurementId: "..."
+}
+```
 - Start your Docker instances for the backend. Assuming that the backend endpoint is http://localhost:8057
 - `expo start -w`
 - You can adjust the backend endpoint and other variables in the web/config.json file. See `Docker Env Variables` for more info
