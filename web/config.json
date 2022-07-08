@@ -1,6 +1,8 @@
 {
     "port": 3001,
-    "endpoint": "localhost:8057",
+    "_endpoint": "https://anomalizer-demo.uc.r.appspot.com",
+    "endpoint": "http://localhost:8056",
+    "__enddpoint": "https://20220707t164857-dot-anomalizer-demo.uc.r.appspot.com/",
     "useArtificialLatency": true
 }
 
