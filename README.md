@@ -32,7 +32,7 @@ To run in a development environment:
 - Clone
 - `cd anomalizer-ui`
 - `npm install`
-- **NEW:** Create a `./src/etc/firebase.web.ts` file with your firebase web configuration. The file contents should look like this:
+- **NEW:** Create a `./src/etc/firebase.web.js` file with your firebase web configuration. The file contents should look like this:
 ```js
 module.exports = {
     apiKey: "...",
