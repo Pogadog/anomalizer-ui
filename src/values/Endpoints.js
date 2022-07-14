@@ -18,7 +18,7 @@ export default async function (path) {
         features: '/features'
     }
 
-    return 'http://' + endpoint + paths[path];
+    return endpoint + paths[path];
 
     
 }

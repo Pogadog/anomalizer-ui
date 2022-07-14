@@ -13,5 +13,7 @@ ENV PORT 3001
 ENV ENDPOINT localhost:8054
 ENV USE_ARTIFICIAL_LATENCY false
 
+LABEL org.opencontainers.image.source https://github.com/pogadog/anomalizer-ui
+
 CMD sh ~/cmd.sh
 
