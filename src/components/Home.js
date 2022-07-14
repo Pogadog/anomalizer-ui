@@ -653,6 +653,7 @@ class Home extends Component {
 
         this.metricFilterSearchBarRef = React.createRef();
         this.metricServerFilterSearchBarRef = React.createRef();
+        this.showInfoMetricTagFilterRef = React.createRef();
 
         this.metricTypeDropdownRef = React.createRef();
         this.metricNumberDropdownRef = React.createRef();
@@ -1235,7 +1236,7 @@ class Home extends Component {
                             return;
                         };
                         tagObject[index] = tag;
-                    })
+                    });
 
                     let feature = () => {
                         if (this.state.showInfoData.features) {
@@ -1271,8 +1272,6 @@ class Home extends Component {
 
                         </View>}
 
-                        
-
                         <View style={{ borderWidth: this.state.showInfoData.status === 'critical' ? 6 : this.state.showInfoData.status === 'warning' ? 4 : 4, borderRadius: 10, marginTop: 10, marginBottom: 10, overflow: 'hidden', borderColor: this.state.showInfoData.chartB ? 'gray' : this.state.showInfoData.status === 'critical' ? 'red' : this.state.showInfoData.status === 'warning' ? '#ff8f17' : 'green' }} >
                             {!this.state.showInfoData.figure ? <ImageBackground source={{ uri: this.state.showInfoData.altImg || this.state.showInfoData.img }} style={{width: 400, height: 400, alignItems: 'center', justifyContent: 'center'}} imageStyle={{ opacity: 0.3 }} >
                                 <Loading size={42} color={this.state.showInfoData.chartB ? 'gray' : this.state.showInfoData.status === 'critical' ? 'red' : this.state.showInfoData.status === 'warning' ? '#ff8f17' : 'green'} />
@@ -1293,7 +1292,40 @@ class Home extends Component {
                             }}  />}
                         </View>
 
-                        
+                        {this.state.showInfoData.figure && <View>
+                            <AppTextInput ref={this.showInfoMetricTagFilterRef} placeholder="Tag filter (regex)" style={{ width: 410, alignSelf: 'center', fontFamily: 'Mono', fontWeight: 'bold', fontSize: 16 }} onChangeText={text => {
+                                clearTimeout(this.showInfoMetricTagFilterTimeout);
+                                
+                                this.showInfoMetricTagFilterTimeout = setTimeout(() => {
+                                    
+                                    let tagSearchStrings = {};
+
+                                    this.state.showInfoData.tags.map((tag, index) => {
+                                        tagSearchStrings[index] = JSON.stringify(tag);
+                                    });
+
+                                    //this.setState(update(this.state, { showInfoMetricTagFilter: {$set: text } }));
+                                    let matchingTags = [];
+                                    for (let tag in tagSearchStrings) {
+                                        let searchString = tagSearchStrings[tag];
+                                        if (searchString.match(`${text}`) || text.length < 1) {
+                                            matchingTags.push(tag);
+                                        }
+                                    }
+                                    let figure = {...this.state.showInfoData.figure};
+                                    for (let tagId in figure.data) {
+                                        console.log(matchingTags, tagId);
+                                        if (matchingTags.includes(tagId)) {
+                                            delete figure.data[tagId].visible;
+                                        } else {
+                                            figure.data[tagId].visible = "legendonly";
+                                        }
+                                    }
+                                    this.setState(update(this.state, { showInfoData: { figure: {$set: figure} } }));
+                                }, 500);
+                                return text;
+                            }} />
+                        </View>}
                         
 
                         {!this.state.showInfoData.chartB && <View style={{ width: "100%" }}  >
@@ -1456,7 +1488,7 @@ class Home extends Component {
                         figure = await this.chartData.getChartFigure(this.state.showInfoData.id);
                     }
 
-                    console.log("figure", figure);
+                    //console.log("figure", figure);
 
                     
 
@@ -1500,7 +1532,7 @@ class Home extends Component {
                     figure.hiddenTags = hiddenTags;
 
                     if (this.state.showInfo) {
-                        this.setState(update(this.state, { showInfoData: { figure: {$set: figure} }, tagDerivedFromId: {$set: tagDerivedFromId} }));
+                        this.setState(update(this.state, { showInfoData: { figure: {$set: figure} }, tagDerivedFromId: {$set: tagDerivedFromId}, showInfoMetricTagFilter: {$set: ""} }));
                     }
                 }}
                 altClose={true}
