@@ -1314,7 +1314,7 @@ class Home extends Component {
                                     }
                                     let figure = {...this.state.showInfoData.figure};
                                     for (let tagId in figure.data) {
-                                        console.log(matchingTags, tagId);
+                                        //console.log(matchingTags, tagId);
                                         if (matchingTags.includes(tagId)) {
                                             delete figure.data[tagId].visible;
                                         } else {
