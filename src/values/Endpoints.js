@@ -25,7 +25,7 @@ export default async function (path) {
         features: '/features'
     }
 
-    return ((window.location.protocol + '//') || 'http://') + endpoint + paths[path];
+    return ((window?.location?.protocol || 'http:') + '//') + endpoint + paths[path];
 
     
 }
