@@ -42,7 +42,7 @@
 
                 let connectionCheck = async () => {
                     try {
-                        let r = await fetch(location);
+                        let r = await fetch(location + '/server-metrics');
 
                         if (r.status === 200) {
                             window.location.href = location;
