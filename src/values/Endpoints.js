@@ -1,9 +1,14 @@
+import { Platform } from "react-native";
 import AppFetch from "../components/AppFetch"
 
 export default async function (path) {
     let config = await (await AppFetch('/config.json', { cache: 'force-cache' })).json();
 
     let endpoint = config.endpoint;
+
+    if (Platform.OS === 'web' && !__DEV__) { // use URL host in production web env
+        endpoint = window.location.host;
+    }
 
     let paths = {
         dashUpdate: '/_dash-update-component',
