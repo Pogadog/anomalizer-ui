@@ -1,0 +1,96 @@
+<html>
+    <head>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Ubuntu&display=swap');
+            p {
+                font-family: Ubuntu
+            }
+            .pulse {
+                animation-duration: 3s;
+                animation-name: pulse;
+                animation-iteration-count: infinite;
+
+            }
+
+            @keyframes pulse {
+                from {
+                    opacity: 1
+                }
+
+                50% {
+                    opacity: 0.5;
+                }
+
+                to {
+                    opacity: 1;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div style="display: flex; flex-flow: column wrap; align-items: center; justify-content: center; width: 100%; height: 100%" >
+            <img id="logo" class="pulse" src="logo.svg" style="width: 100; height: 100" />
+            <p id="main-title" style="font-size: 48" >Starting the Anomalizer...</p>
+            <p id="status" >Checking connection...</p>
+        </div>
+    </body>
+    <footer>
+        <script>
+            let main = async () => {
+                let loop = null;
+                let location = "https://engine." + (window.location.host || "anomalizer.app");
+
+                let connectionCheck = async () => {
+                    try {
+                        let r = await fetch(location);
+
+                        if (r.status === 200) {
+                            window.location.href = location;
+                            clearInterval(loop);
+                            return true;
+                        } else {
+                            return false;
+                        }
+                    } catch (e) {
+                        return false;
+                    }
+                    
+                }
+
+                let r = await connectionCheck();
+                if (r) {
+                    document.getElementById("status").innerHTML = "System online. Redirecting...";
+                    return;
+                }
+
+                document.getElementById("status").innerHTML = "Warming up the system...";
+
+                let tries = 0;
+
+                loop = setInterval(async () => {
+                    if (tries > 30) {
+                        document.getElementById("status").innerHTML = "Please refresh the page to try again";
+                        document.getElementById("main-title").innerHTML = "Couldn't start the Anomalizer";
+
+                        let titleElement = document.getElementById("logo");
+                        titleElement.classList.remove("pulse");
+                        titleElement.style.opacity = 0.5;
+
+                        clearInterval(loop);
+                        return;
+                    }
+                    let r = await connectionCheck();
+                    if (r) {
+                        document.getElementById("status").innerHTML = "System online. Redirecting...";
+                        return;
+                    }
+                    tries++;
+                    
+                }, 3000);
+                
+            }
+            main();
+            
+        </script>
+    </footer>
+</html>
