@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View, Platform } from 'react-native';
 
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -38,7 +38,12 @@ class App extends Component {
       this.setState(update(this.state, { inactive: {$set: true} }));
     }
     this.ad.onActivity = () => {
-      this.setState(update(this.state, { inactive: {$set: false} }));
+      if (Platform.OS === 'web' && window.location) {
+        window.location.href = 'https://anomalizer.app';
+        this.ad.onActivity = () => null; // prevent replay
+      } else {
+        this.setState(update(this.state, { inactive: {$set: false} }));
+      }
     }
     this.ad.start();
   }
