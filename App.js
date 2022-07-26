@@ -38,7 +38,7 @@ class App extends Component {
       this.setState(update(this.state, { inactive: {$set: true} }));
     }
     this.ad.onActivity = () => {
-      if (Platform.OS === 'web' && window.location && window.location.hostname.includes('engine')) {
+      if (Platform.OS === 'web' && this.state.inactive && window.location && window.location.hostname.includes('engine')) {
         window.location.href = 'https://anomalizer.app';
         this.ad.onActivity = () => null; // prevent replay
       } else {
