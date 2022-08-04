@@ -1326,19 +1326,20 @@ class Home extends Component {
                         {this.state.showInfoData.figure && <View>
                             <AppTextInput ref={this.showInfoMetricTagFilterRef} placeholder="Tag filter (regex)" style={{ width: 410, alignSelf: 'center', fontFamily: 'Mono', fontWeight: 'bold', fontSize: 16 }} onChangeText={text => {
                                 clearTimeout(this.showInfoMetricTagFilterTimeout);
-                                
+
                                 this.showInfoMetricTagFilterTimeout = setTimeout(() => {
                                     
                                     let tagSearchStrings = {};
 
                                     this.state.showInfoData.tags.map((tag, index) => {
-                                        tagSearchStrings[index] = JSON.stringify(tag);
+                                        tagSearchStrings[index] = '"' + index + '": ' + JSON.stringify(tag, null, 1);
                                     });
 
                                     //this.setState(update(this.state, { showInfoMetricTagFilter: {$set: text } }));
                                     let matchingTags = [];
                                     for (let tag in tagSearchStrings) {
                                         let searchString = tagSearchStrings[tag];
+                                        console.log(searchString)
                                         if (searchString.match(`${text}`) || text.length < 1) {
                                             matchingTags.push(tag);
                                         }
