@@ -1348,6 +1348,7 @@ class Home extends Component {
                                     let matchingTags = [];
                                     for (let tag in tagSearchStrings) {
                                         let searchString = tagSearchStrings[tag];
+                                        console.log(searchString)
                                         if (searchString.match(`${text}`) || text.length < 1) {
                                             matchingTags.push(tag);
                                         }
