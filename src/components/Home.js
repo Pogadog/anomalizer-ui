@@ -220,7 +220,7 @@ class ChartData {
                 'Accept-Type': 'application/json',
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ query, not: notEqual })
+            body: JSON.stringify({ query, invert: notEqual })
         });
 
         this.serverSideFilterQuery = query;
@@ -811,6 +811,11 @@ class Home extends Component {
         }
 
         await this.metricFilters.get();
+
+        let filter = await (await AppFetch(await Endpoints('filter'))).json();
+
+        this.setState(update(this.state, { metricServerFilter: {$set: filter.query}, serverNotEqualFilter: {$set: filter.invert } }));
+        this.metricServerFilterSearchBarRef.current?.setValue(filter.query);
 
         this.chartData.onChartUpdate = (charts) => {
             this.setState(update(this.state, { charts: {$set: charts} }), () => {
