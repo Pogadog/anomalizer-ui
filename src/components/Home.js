@@ -812,9 +812,12 @@ class Home extends Component {
 
         await this.metricFilters.get();
 
+        // default server filter and select timeseries only on init
+
         let filter = await (await AppFetch(await Endpoints('filter'))).json();
 
-        this.setState(update(this.state, { metricServerFilter: {$set: filter.query}, serverNotEqualFilter: {$set: filter.invert } }));
+        this.setState(update(this.state, { metricServerFilter: {$set: filter.query}, serverNotEqualFilter: {$set: filter.invert }, filterPresets: {"plot.*timeseries": {$set: { priority: 1 }}} }));
+        
         this.metricServerFilterSearchBarRef.current?.setValue(filter.query);
 
         this.chartData.onChartUpdate = (charts) => {
