@@ -17,7 +17,7 @@ dockerToken
 dockerTarget
 dockerUsername
 canister_ids.json
+.pat
 
 # macOS
 .DS_Store
-.pat

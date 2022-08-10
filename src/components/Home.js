@@ -24,6 +24,12 @@ import Grafana from '../images/grafana';
 
 import uuid from 'uuid/v4';
 
+/**
+ * NOTICES TO PROGRAMMER
+ * 
+ * 1: These affect the backend, so disable them until we go multi-user on that side. Not removing them entirely as they may be useful later. Will mock SDKs.
+ */
+
 class MetricFilters {
 
     constructor() {
@@ -274,6 +280,8 @@ class ChartData {
         this.stopUpdates();
 
         await SecureStore.setItemAsync(this.metricConfigKey, JSON.stringify({ type, limit }));
+
+        // SEE NOTICE 1
 
         /*
         let r = await AppFetch(await Endpoints('dashUpdate'), { 
@@ -763,13 +771,13 @@ class Home extends Component {
                 }
 
                 let weight = (
-                    this.state.metricWeightPreference === 'alpha' ? -chart.metric.charCodeAt(0):                    
+                    this.state.metricWeightPreference === 'alpha' ? -chart.metric.charCodeAt(0): 
                     this.state.metricWeightPreference === 'spike' ? chart.stats.spike: 
                     this.state.metricWeightPreference === 'rstd' ? chart.stats.rstd : 
                     this.state.metricWeightPreference === 'max' ? chart.stats.max : 
                     this.state.metricWeightPreference === 'rmax' ? chart.stats.rmax : 
                     this.state.metricWeightPreference === 'mean' ? chart.stats.mean : 
-                    chart.stats.std) + Math.abs((chart.features.increasing?.increase ?? 0) + (chart.features.decreasing?.decrease ?? 0)) + (Math.abs(chart.features.hockeystick?.increasing || chart.features.hockeystick?.increasing || 0));  
+                    chart.stats.std) + Math.abs((chart.features.increasing?.increase ?? 0) + (chart.features.decreasing?.decrease ?? 0)) + (Math.abs(chart.features.hockeystick?.increasing || chart.features.hockeystick?.increasing || 0)); 
 
                 chartStates[chart.status].push({...chart, id: chartId, weight});
 
@@ -1040,12 +1048,12 @@ class Home extends Component {
                         name: 'By Max'
                     },
                     {
-                        id: 'spike',
-                        name: 'By Spike'
-                    },
-                    {
                         id: 'rmax',
                         name: 'By -Max'
+                    },
+                    {
+                        id: 'spike',
+                        name: 'By Spike'
                     },
                     {
                         id: 'mean',
@@ -1067,7 +1075,7 @@ class Home extends Component {
 
                 }} pickerName="Sorting Weight Preference" />
                 
-                {/* These affect the backend, so disable them until we go multi-user on that side.
+                {/* SEE NOTICE 1
                 <AppPicker ref={this.metricTypeDropdownRef} disabled={this.state.forceLoading} options={[
                     
                     {
@@ -1332,6 +1340,7 @@ class Home extends Component {
                                     let tagSearchStrings = {};
 
                                     this.state.showInfoData.tags.map((tag, index) => {
+                                        // refined regex tag search
                                         tagSearchStrings[index] = '"' + index + '": ' + JSON.stringify(tag, null, 1);
                                     });
 
@@ -1361,7 +1370,7 @@ class Home extends Component {
                         
 
                         {!this.state.showInfoData.chartB && <View style={{ width: "100%" }}  >
-                            <AppText >Metric/{this.state.showInfoData.type}</AppText>
+                            <AppText >Metric / {this.state.showInfoData.type}</AppText>
                             <View style={{ height: 5 }} />
                             <ScrollView horizontal={true} >
                                 <AppText tag="pre" >{this.state.showInfoData.metric}</AppText>
