@@ -618,7 +618,7 @@ class Home extends Component {
             chartStatuses: {},
             chartSortOption: 'critical_first',
             metricType: '',
-            metricWeightPreference: 'rstd',
+            metricWeightPreference: 'features',
             chartLimit: 0,
             chartLoading: false,
             chartUpdateKey: String(Date.now()),
@@ -791,6 +791,7 @@ class Home extends Component {
                     this.state.metricWeightPreference === 'alpha' ? -chart.metric.charCodeAt(0): 
                     this.state.metricWeightPreference === 'spike' ? chart.stats.spike: 
                     this.state.metricWeightPreference === 'rstd' ? chart.stats.rstd : 
+                    this.state.metricWeightPreference === 'features' ? chart.features.normalized_features ?? 0: 
                     this.state.metricWeightPreference === 'max' ? chart.stats.max : 
                     this.state.metricWeightPreference === 'rmax' ? chart.stats.rmax : 
                     this.state.metricWeightPreference === 'mean' ? chart.stats.mean : 
@@ -1027,6 +1028,8 @@ class Home extends Component {
 
                             clearTimeout(this.clientMetricFilterTimeout);
                             
+                            if (this.state.forceLoading) return;
+
                             this.clientMetricFilterTimeout = setTimeout(() => {
                                 this.setState(update(this.state, { metricFilter: {$set: text } }));
                                 this.renderCharts();
@@ -1127,6 +1130,10 @@ class Home extends Component {
 
                 <AppPicker ref={this.metricTypeDropdownRef} disabled={this.state.forceLoading} options={[
                     
+                    {
+                        id: 'features',
+                        name: 'By Features'
+                    },
                     {
                         id: 'rstd',
                         name: 'By RSTD'
