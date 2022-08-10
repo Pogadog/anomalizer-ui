@@ -24,6 +24,12 @@ import Grafana from '../images/grafana';
 
 import uuid from 'uuid/v4';
 
+/**
+ * NOTICES TO PROGRAMMER
+ * 
+ * 1: These affect the backend, so disable them until we go multi-user on that side. Not removing them entirely as they may be useful later. Will mock SDKs.
+ */
+
 class MetricFilters {
 
     constructor() {
@@ -275,6 +281,9 @@ class ChartData {
 
         await SecureStore.setItemAsync(this.metricConfigKey, JSON.stringify({ type, limit }));
 
+        // SEE NOTICE 1
+
+        /*
         let r = await AppFetch(await Endpoints('dashUpdate'), { 
             method: 'POST',
             headers: {
@@ -283,8 +292,10 @@ class ChartData {
             },
             body: JSON.stringify(this.chartPollData(type, limit))
         });
+        */
         await this.startUpdates();
-        return r.status;
+        
+        return 'ok';
     }
 
     getChartFigure = async id => {
@@ -554,9 +565,9 @@ class Chart extends PureComponent {
 
                 {!!this.props.chart.features?.increasing && this.props.chart.plot !== 'scatter' && trending('up', {position: 'absolute', bottom: 5, left: 5, }, this.props.tag ? 9 : 14)}
 
-                {!!this.props.chart.features?.hockeystick?.increasing && trending('up', {position: 'absolute', bottom: 5, left: 5, }, this.props.tag ? 9 : 14, true)}
+                {!!this.props.chart.features?.hockeystick?.increasing && trending('up', {position: 'absolute', bottom: 5, left: 35, }, this.props.tag ? 9 : 14, true)}
 
-                {!!this.props.chart.features?.hockeystick?.decreasing && trending('down', {position: 'absolute', bottom: 5, left: 5, }, this.props.tag ? 9 : 14, true)}
+                {!!this.props.chart.features?.hockeystick?.decreasing && trending('down', {position: 'absolute', bottom: 5, left: 35, }, this.props.tag ? 9 : 14, true)}
 
                 {this.props.tag !== undefined && <View style={{ backgroundColor: "#e7e7e7", borderRadius: 9999, padding: 5, position: 'absolute', bottom: 5, left: (this.props.chart.features?.increasing || this.props.chart.features?.decreasing) ? 30 : 5, zIndex: 9 }} >
                     <AppText style={{ color: 'black', fontSize: 9 }} >Tag {this.props.tag}</AppText>
@@ -759,7 +770,14 @@ class Home extends Component {
                     if (!presetMatch) continue;
                 }
 
-                let weight = (this.state.metricWeightPreference === 'alpha' ? -chart.metric.charCodeAt(0) : this.state.metricWeightPreference === 'rstd' ? chart.stats.rstd : this.state.metricWeightPreference === 'mean' ? chart.stats.mean : chart.stats.std) + Math.abs((chart.features.increasing?.increase ?? 0) + (chart.features.decreasing?.decrease ?? 0)) + (Math.abs(chart.features.hockeystick?.increasing || chart.features.hockeystick?.increasing || 0));  
+                let weight = (
+                    this.state.metricWeightPreference === 'alpha' ? -chart.metric.charCodeAt(0): 
+                    this.state.metricWeightPreference === 'spike' ? chart.stats.spike: 
+                    this.state.metricWeightPreference === 'rstd' ? chart.stats.rstd : 
+                    this.state.metricWeightPreference === 'max' ? chart.stats.max : 
+                    this.state.metricWeightPreference === 'rmax' ? chart.stats.rmax : 
+                    this.state.metricWeightPreference === 'mean' ? chart.stats.mean : 
+                    chart.stats.std) + Math.abs((chart.features.increasing?.increase ?? 0) + (chart.features.decreasing?.decrease ?? 0)) + (Math.abs(chart.features.hockeystick?.increasing || chart.features.hockeystick?.increasing || 0)); 
 
                 chartStates[chart.status].push({...chart, id: chartId, weight});
 
@@ -1026,6 +1044,18 @@ class Home extends Component {
                         name: 'By RSTD'
                     },
                     {
+                        id: 'max',
+                        name: 'By Max'
+                    },
+                    {
+                        id: 'rmax',
+                        name: 'By -Max'
+                    },
+                    {
+                        id: 'spike',
+                        name: 'By Spike'
+                    },
+                    {
                         id: 'mean',
                         name: 'By Mean'
                     },
@@ -1045,11 +1075,11 @@ class Home extends Component {
 
                 }} pickerName="Sorting Weight Preference" />
                 
-
+                {/* SEE NOTICE 1
                 <AppPicker ref={this.metricTypeDropdownRef} disabled={this.state.forceLoading} options={[
                     
                     {
-                        id: '',
+                        id: 'all',
                         name: 'All Types'
                     },
                     {
@@ -1092,6 +1122,7 @@ class Home extends Component {
                     });
                     
                 }} pickerName="Number of metrics" />
+                */}
 
                 {false && <AppPicker disabled={this.state.forceLoading} options={[
                     {
@@ -1303,13 +1334,14 @@ class Home extends Component {
                         {this.state.showInfoData.figure && <View>
                             <AppTextInput ref={this.showInfoMetricTagFilterRef} placeholder="Tag filter (regex)" style={{ width: 410, alignSelf: 'center', fontFamily: 'Mono', fontWeight: 'bold', fontSize: 16 }} onChangeText={text => {
                                 clearTimeout(this.showInfoMetricTagFilterTimeout);
-                                
+
                                 this.showInfoMetricTagFilterTimeout = setTimeout(() => {
                                     
                                     let tagSearchStrings = {};
 
                                     this.state.showInfoData.tags.map((tag, index) => {
-                                        tagSearchStrings[index] = JSON.stringify(tag);
+                                        // refined regex tag search
+                                        tagSearchStrings[index] = '"' + index + '": ' + JSON.stringify(tag, null, 1);
                                     });
 
                                     //this.setState(update(this.state, { showInfoMetricTagFilter: {$set: text } }));
@@ -1337,7 +1369,7 @@ class Home extends Component {
                         
 
                         {!this.state.showInfoData.chartB && <View style={{ width: "100%" }}  >
-                            <AppText >Metric:</AppText>
+                            <AppText >Metric / {this.state.showInfoData.type}</AppText>
                             <View style={{ height: 5 }} />
                             <ScrollView horizontal={true} >
                                 <AppText tag="pre" >{this.state.showInfoData.metric}</AppText>
