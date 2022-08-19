@@ -1000,6 +1000,9 @@ class Home extends Component {
                             this.metricFilterSearchBarRef.current?.setValue('');
                             
                         }} ref={this.metricFilterSearchBarRef} placeholder="Local metric filter (regex)" style={{ width: 400, alignSelf: 'center', borderBottomRightRadius: 0, borderBottomLeftRadius: 0, fontFamily: 'Mono', fontWeight: 'bold' }} onChangeText={text => {
+
+                            if (this.state.forceLoading) return;
+
                             clearTimeout(this.clientMetricFilterTimeout);
                             
                             this.clientMetricFilterTimeout = setTimeout(() => {
@@ -1012,6 +1015,8 @@ class Home extends Component {
                         <AppTextInput noClickAction={true} action="cloud-upload" actionDoneIcon="cloud-done-outline" actionLoading={this.state.metricServerFilterLoading} actionComplete={this.state.metricServerFilterComplete} onAction={async () => {
                             this.sendServerFilter();
                         }} ref={this.metricServerFilterSearchBarRef} placeholder="Cloud metric filter (regex)" style={{ width: 400, alignSelf: 'center', borderTop: 0, borderTopRightRadius: 0, borderTopLeftRadius: 0, fontFamily: 'Mono', fontWeight: 'bold'}} onChangeText={text => {
+
+                            if (this.state.forceLoading) return;
 
                             clearTimeout(this.serverMetricFilterTimeout);
 
