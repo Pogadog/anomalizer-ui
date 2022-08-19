@@ -787,7 +787,8 @@ class Home extends Component {
                     if (!presetMatch) continue;
                 }
 
-                let weight = (
+                let weight = this.state.metricWeightPreference === 'cluster' ? chart.features.cluster ?? 0: 
+                ((
                     this.state.metricWeightPreference === 'alpha' ? -chart.metric.charCodeAt(0): 
                     this.state.metricWeightPreference === 'spike' ? chart.stats.spike: 
                     this.state.metricWeightPreference === 'rstd' ? chart.stats.rstd : 
@@ -795,8 +796,8 @@ class Home extends Component {
                     this.state.metricWeightPreference === 'max' ? chart.stats.max : 
                     this.state.metricWeightPreference === 'rmax' ? chart.stats.rmax : 
                     this.state.metricWeightPreference === 'mean' ? chart.stats.mean : 
-                    chart.stats.std) + Math.abs((chart.features.increasing?.increase ?? 0) + (chart.features.decreasing?.decrease ?? 0)) + (Math.abs(chart.features.hockeystick?.increasing || chart.features.hockeystick?.increasing || 0)); 
-
+                    chart.stats.std) + Math.abs((chart.features.increasing?.increase ?? 0) + (chart.features.decreasing?.decrease ?? 0)) + (Math.abs(chart.features.hockeystick?.increasing || chart.features.hockeystick?.increasing || 0)) 
+                );
                 chartStates[chart.status].push({...chart, id: chartId, weight});
 
             }
@@ -1133,6 +1134,10 @@ class Home extends Component {
                     {
                         id: 'features',
                         name: 'By Features'
+                    },
+                    {
+                        id: 'cluster',
+                        name: 'By Cluster'
                     },
                     {
                         id: 'rstd',
