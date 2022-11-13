@@ -6,7 +6,12 @@ export default async function (path) {
     let endpoint;
 
     let config = await (await AppFetch('/config.json', { cache: 'force-cache' })).json();
-    endpoint = config.endpoint;
+
+    if (config.referToHost) {
+        endpoint = window.location.host
+    } else {
+        endpoint = config.endpoint;
+    }
 
     let paths = {
         dashUpdate: '/_dash-update-component',
