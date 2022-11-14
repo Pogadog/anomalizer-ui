@@ -67,15 +67,15 @@ class MetricFilters {
                 name: 'Increasing',
                 displaySeparator: true
             },
-            'status.*normal': {
+            '"status":"normal"': {
                 ts: 2000,
                 name: 'Cool'
             },
-            'status.*warning': {
+            '"status":"waring"': {
                 ts: 3000,
                 name: 'Warm'
             },
-            'status.*critical': {
+            '"status":"critical"': {
                 ts: 4000,
                 name: 'Hot',
                 displaySeparator: true
@@ -775,6 +775,7 @@ class Home extends Component {
                     this.state.metricWeightPreference === 'spike' ? chart.stats.spike: 
                     this.state.metricWeightPreference === 'rstd' ? chart.stats.rstd : 
                     this.state.metricWeightPreference === 'max' ? chart.stats.max : 
+                    this.state.metricWeightPreference === 'cardinality' ? chart.tags.length :
                     this.state.metricWeightPreference === 'rmax' ? chart.stats.rmax : 
                     this.state.metricWeightPreference === 'mean' ? chart.stats.mean : 
                     chart.stats.std) + Math.abs((chart.features.increasing?.increase ?? 0) + (chart.features.decreasing?.decrease ?? 0)) + (Math.abs(chart.features.hockeystick?.increasing || chart.features.hockeystick?.increasing || 0)); 
@@ -1071,7 +1072,11 @@ class Home extends Component {
                     {
                         id: 'alpha',
                         name: 'By A-Z'
-                    }
+                    },
+                    {
+                        id: 'cardinality',
+                        name: 'By Cardinality'
+                    },
 
                 ]} currentOption={this.state.metricWeightPreference} onOptionChange={option => {
                     this.setState(update(this.state, { metricWeightPreference: {$set: option}}), async () => {
