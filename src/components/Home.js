@@ -71,7 +71,7 @@ class MetricFilters {
                 ts: 2000,
                 name: 'Cool'
             },
-            '"status":"waring"': {
+            '"status":"warning"': {
                 ts: 3000,
                 name: 'Warm'
             },
