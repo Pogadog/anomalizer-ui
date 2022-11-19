@@ -658,8 +658,8 @@ class Home extends Component {
             hiddenSimilarCharts: {},
             mainSplit: 150 * 6,
             showHudInfo: false,
-            tagDerivedFromId: false
-
+            tagDerivedFromId: false,
+            groupByStatus: true
         }
 
         this.metricFilterSearchBarRef = React.createRef();
@@ -784,33 +784,42 @@ class Home extends Component {
 
             }
 
+            let charts = [];
 
-            let weightSort = ( a, b ) => {
-                if ( a.weight < b.weight ){
-                    return 1;
+            if (this.state.groupByStatus) {
+                let weightSort = ( a, b ) => {
+                    if ( a.weight < b.weight ){
+                        return 1;
+                    }
+                    if ( a.weight > b.weight ){
+                        return -1;
+                    }
+    
+                    return 0;
                 }
-                if ( a.weight > b.weight ){
-                    return -1;
+    
+                chartStates.critical.sort(weightSort);
+                chartStates.warning.sort(weightSort);
+                chartStates.normal.sort(weightSort);
+    
+                
+    
+                if (this.state.chartSortOption === 'critical_first') {
+                    charts = [...chartStates.critical, ...chartStates.warning, ...chartStates.normal];
+                } else if (this.state.chartSortOption === 'warning_first') {
+                    charts = [...chartStates.warning, ...chartStates.critical, ...chartStates.normal];
+                } else if (this.state.chartSortOption === 'normal_first') {
+                    charts = [...chartStates.normal, ...chartStates.critical, ...chartStates.warning];
                 }
-
-                return 0;
-            }
-
-            chartStates.critical.sort(weightSort);
-            chartStates.warning.sort(weightSort);
-            chartStates.normal.sort(weightSort);
-
-            let charts; 
-
-            if (this.state.chartSortOption === 'critical_first') {
+    
+                
+            } else {
                 charts = [...chartStates.critical, ...chartStates.warning, ...chartStates.normal];
-            } else if (this.state.chartSortOption === 'warning_first') {
-                charts = [...chartStates.warning, ...chartStates.critical, ...chartStates.normal];
-            } else if (this.state.chartSortOption === 'normal_first') {
-                charts = [...chartStates.normal, ...chartStates.critical, ...chartStates.warning];
+                charts.sort(weightSort);
             }
 
             this.setState(update(this.state, { renderCharts: {$set: { charts, someAbnormal } }, forceLoading: {$set: false} }));
+            
         }, timeout);
 
     }
@@ -1041,6 +1050,16 @@ class Home extends Component {
                     }} >
                         <Ionicons name="save" size={24} color={(this.state.metricFilter.length < 1 && this.state.metricServerFilter.length < 1) ? 'gray' : Theme.colors.palette.primary} />
                     </TouchableOpacity>
+                </View>
+
+                <View style={{ alignSelf: 'center', flexDirection: 'row', alignItems: 'center' }} >
+                    <TouchableOpacity onPress={() => {
+                        this.setState(update(this.state, { groupByStatus: {$set: !this.state.groupByStatus} }));
+                    }} >
+                        <MaterialCommunityIcons name={this.state.groupByStatus ? "checkbox-marked" : 'checkbox-blank-outline'} size={24} color={Theme.colors.palette.primary} />
+                    </TouchableOpacity>
+                    <View style={{ width: 2 }} />
+                    <AppText>Group by status</AppText>
                 </View>
 
                 <AppPicker ref={this.metricTypeDropdownRef} disabled={this.state.forceLoading} options={[
