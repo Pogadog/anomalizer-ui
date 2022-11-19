@@ -67,15 +67,15 @@ class MetricFilters {
                 name: 'Increasing',
                 displaySeparator: true
             },
-            'status.*normal': {
+            '"status":"normal"': {
                 ts: 2000,
                 name: 'Cool'
             },
-            'status.*warning': {
+            '"status":"warning"': {
                 ts: 3000,
                 name: 'Warm'
             },
-            'status.*critical': {
+            '"status":"critical"': {
                 ts: 4000,
                 name: 'Hot',
                 displaySeparator: true
@@ -658,8 +658,8 @@ class Home extends Component {
             hiddenSimilarCharts: {},
             mainSplit: 150 * 6,
             showHudInfo: false,
-            tagDerivedFromId: false
-
+            tagDerivedFromId: false,
+            groupByStatus: true
         }
 
         this.metricFilterSearchBarRef = React.createRef();
@@ -775,6 +775,7 @@ class Home extends Component {
                     this.state.metricWeightPreference === 'spike' ? chart.stats.spike: 
                     this.state.metricWeightPreference === 'rstd' ? chart.stats.rstd : 
                     this.state.metricWeightPreference === 'max' ? chart.stats.max : 
+                    this.state.metricWeightPreference === 'cardinality' ? chart.tags.length :
                     this.state.metricWeightPreference === 'rmax' ? chart.stats.rmax : 
                     this.state.metricWeightPreference === 'mean' ? chart.stats.mean : 
                     chart.stats.std) + Math.abs((chart.features.increasing?.increase ?? 0) + (chart.features.decreasing?.decrease ?? 0)) + (Math.abs(chart.features.hockeystick?.increasing || chart.features.hockeystick?.increasing || 0)); 
@@ -783,6 +784,7 @@ class Home extends Component {
 
             }
 
+            let charts = [];
 
             let weightSort = ( a, b ) => {
                 if ( a.weight < b.weight ){
@@ -795,21 +797,30 @@ class Home extends Component {
                 return 0;
             }
 
-            chartStates.critical.sort(weightSort);
-            chartStates.warning.sort(weightSort);
-            chartStates.normal.sort(weightSort);
-
-            let charts; 
-
-            if (this.state.chartSortOption === 'critical_first') {
+            if (this.state.groupByStatus) {
+                
+                chartStates.critical.sort(weightSort);
+                chartStates.warning.sort(weightSort);
+                chartStates.normal.sort(weightSort);
+    
+                
+    
+                if (this.state.chartSortOption === 'critical_first') {
+                    charts = [...chartStates.critical, ...chartStates.warning, ...chartStates.normal];
+                } else if (this.state.chartSortOption === 'warning_first') {
+                    charts = [...chartStates.warning, ...chartStates.critical, ...chartStates.normal];
+                } else if (this.state.chartSortOption === 'normal_first') {
+                    charts = [...chartStates.normal, ...chartStates.critical, ...chartStates.warning];
+                }
+    
+                
+            } else {
                 charts = [...chartStates.critical, ...chartStates.warning, ...chartStates.normal];
-            } else if (this.state.chartSortOption === 'warning_first') {
-                charts = [...chartStates.warning, ...chartStates.critical, ...chartStates.normal];
-            } else if (this.state.chartSortOption === 'normal_first') {
-                charts = [...chartStates.normal, ...chartStates.critical, ...chartStates.warning];
+                charts.sort(weightSort);
             }
 
             this.setState(update(this.state, { renderCharts: {$set: { charts, someAbnormal } }, forceLoading: {$set: false} }));
+            
         }, timeout);
 
     }
@@ -1042,6 +1053,18 @@ class Home extends Component {
                     </TouchableOpacity>
                 </View>
 
+                <View style={{ alignSelf: 'center', flexDirection: 'row', alignItems: 'center' }} >
+                    <TouchableOpacity onPress={() => {
+                        this.setState(update(this.state, { groupByStatus: {$set: !this.state.groupByStatus} }), () => {
+                            this.renderCharts();
+                        });
+                    }} >
+                        <MaterialCommunityIcons name={this.state.groupByStatus ? "checkbox-marked" : 'checkbox-blank-outline'} size={24} color={Theme.colors.palette.primary} />
+                    </TouchableOpacity>
+                    <View style={{ width: 2 }} />
+                    <AppText>Group by status</AppText>
+                </View>
+
                 <AppPicker ref={this.metricTypeDropdownRef} disabled={this.state.forceLoading} options={[
                     
                     {
@@ -1071,7 +1094,11 @@ class Home extends Component {
                     {
                         id: 'alpha',
                         name: 'By A-Z'
-                    }
+                    },
+                    {
+                        id: 'cardinality',
+                        name: 'By Cardinality'
+                    },
 
                 ]} currentOption={this.state.metricWeightPreference} onOptionChange={option => {
                     this.setState(update(this.state, { metricWeightPreference: {$set: option}}), async () => {
