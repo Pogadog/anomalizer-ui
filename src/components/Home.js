@@ -1055,7 +1055,9 @@ class Home extends Component {
 
                 <View style={{ alignSelf: 'center', flexDirection: 'row', alignItems: 'center' }} >
                     <TouchableOpacity onPress={() => {
-                        this.setState(update(this.state, { groupByStatus: {$set: !this.state.groupByStatus} }));
+                        this.setState(update(this.state, { groupByStatus: {$set: !this.state.groupByStatus} }), () => {
+                            this.renderCharts();
+                        });
                     }} >
                         <MaterialCommunityIcons name={this.state.groupByStatus ? "checkbox-marked" : 'checkbox-blank-outline'} size={24} color={Theme.colors.palette.primary} />
                     </TouchableOpacity>
