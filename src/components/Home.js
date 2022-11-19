@@ -786,18 +786,19 @@ class Home extends Component {
 
             let charts = [];
 
-            if (this.state.groupByStatus) {
-                let weightSort = ( a, b ) => {
-                    if ( a.weight < b.weight ){
-                        return 1;
-                    }
-                    if ( a.weight > b.weight ){
-                        return -1;
-                    }
-    
-                    return 0;
+            let weightSort = ( a, b ) => {
+                if ( a.weight < b.weight ){
+                    return 1;
                 }
-    
+                if ( a.weight > b.weight ){
+                    return -1;
+                }
+
+                return 0;
+            }
+
+            if (this.state.groupByStatus) {
+                
                 chartStates.critical.sort(weightSort);
                 chartStates.warning.sort(weightSort);
                 chartStates.normal.sort(weightSort);
