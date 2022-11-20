@@ -1005,45 +1005,84 @@ class Home extends Component {
                     </View>
                     
                     <View style={{ width: 5 }} />
-                    <View >
-                        <AppTextInput action="arrow-down-circle" actionDisabled={this.state.metricFilter.length < 1} onAction={() => {
-                            this.metricServerFilterSearchBarRef.current?.setValue(this.state.metricFilter);
-                            this.metricFilterSearchBarRef.current?.setValue('');
-                            
-                        }} ref={this.metricFilterSearchBarRef} placeholder="Local metric filter (regex)" style={{ width: 400, alignSelf: 'center', borderBottomRightRadius: 0, borderBottomLeftRadius: 0, fontFamily: 'Mono', fontWeight: 'bold' }} onChangeText={text => {
+                    <View style={{ flexDirection: 'column' }} >
+                        <View style={{ flexDirection: 'row' }} >
+                            <AppTextInput ref={this.metricFilterSearchBarRef} placeholder="Local metric filter (regex)" style={{ width: 400, alignSelf: 'center', borderTopRightRadius: 0, borderBottomRightRadius: 0, borderBottomLeftRadius: 0, borderRightColor: 'lightgray', fontFamily: 'Mono', fontWeight: 'bold' }} onChangeText={text => {
 
-                            if (this.state.forceLoading) return;
+                                if (this.state.forceLoading) return;
 
-                            clearTimeout(this.clientMetricFilterTimeout);
-                            
-                            this.clientMetricFilterTimeout = setTimeout(() => {
-                                this.setState(update(this.state, { metricFilter: {$set: text } }));
-                                this.renderCharts();
-                            }, 500);
-                            return text;
-                        }} />
+                                clearTimeout(this.clientMetricFilterTimeout);
+                                
+                                this.clientMetricFilterTimeout = setTimeout(() => {
+                                    this.setState(update(this.state, { metricFilter: {$set: text } }));
+                                    this.renderCharts();
+                                }, 500);
+                                return text;
+                            }} />
 
-                        <AppTextInput noClickAction={true} action="cloud-upload" actionDoneIcon="cloud-done-outline" actionLoading={this.state.metricServerFilterLoading} actionComplete={this.state.metricServerFilterComplete} onAction={async () => {
-                            this.sendServerFilter();
-                        }} ref={this.metricServerFilterSearchBarRef} placeholder="Cloud metric filter (regex)" style={{ width: 400, alignSelf: 'center', borderTop: 0, borderTopRightRadius: 0, borderTopLeftRadius: 0, fontFamily: 'Mono', fontWeight: 'bold'}} onChangeText={text => {
+                            <AppTextInput action="arrow-down-circle" actionDisabled={this.state.metricFilter.length < 1} onAction={() => {
+                                this.metricServerFilterSearchBarRef.current?.setValue(this.state.metricFilter);
+                                this.metricFilterSearchBarRef.current?.setValue('');
+                                
+                            }} ref={this.metricFilterSearchBarRef} placeholder="Local metric filter (regex)" style={{ width: 400, alignSelf: 'center', borderLeftWidth: 0, borderTopLeftRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, fontFamily: 'Mono', fontWeight: 'bold' }} onChangeText={text => {
 
-                            if (this.state.forceLoading) return;
+                                if (this.state.forceLoading) return;
 
-                            clearTimeout(this.serverMetricFilterTimeout);
+                                clearTimeout(this.clientMetricFilterTimeout);
+                                
+                                this.clientMetricFilterTimeout = setTimeout(() => {
+                                    this.setState(update(this.state, { metricFilter: {$set: text } }));
+                                    this.renderCharts();
+                                }, 500);
+                                return text;
+                            }} />
+                        </View>
+                        
+                        <View style={{ flexDirection: 'row' }} >
+                            <AppTextInput ref={this.metricServerFilterSearchBarRef} placeholder="Cloud metric filter (regex)" style={{ width: 400, alignSelf: 'center', borderTop: 0, borderTopRightRadius: 0, borderBottomRightRadius: 0, borderTopLeftRadius: 0, borderRightColor: 'lightgray', fontFamily: 'Mono', fontWeight: 'bold'}} onChangeText={text => {
 
-                            //this.setState(update(this.state, { metricServerFilterTyping: {$set: true } }));
+                                if (this.state.forceLoading) return;
 
-                            this.serverMetricFilterTimeout = setTimeout(() => {
-                                this.setState(update(this.state, { metricServerFilter: {$set: text }, metricServerFilterTyping: {$set: false } }), () => {
+                                clearTimeout(this.serverMetricFilterTimeout);
 
-                                    this.setState(update(this.state, { metricServerFilterComplete: {$set: text === this.state.metricServerFilterCompleteText } }));
-                                    this.sendServerFilter();
-                                });
-                            }, 1000);
+                                //this.setState(update(this.state, { metricServerFilterTyping: {$set: true } }));
 
-                            
-                            return text;
-                        }} />
+                                this.serverMetricFilterTimeout = setTimeout(() => {
+                                    this.setState(update(this.state, { metricServerFilter: {$set: text }, metricServerFilterTyping: {$set: false } }), () => {
+
+                                        this.setState(update(this.state, { metricServerFilterComplete: {$set: text === this.state.metricServerFilterCompleteText } }));
+                                        this.sendServerFilter();
+                                    });
+                                }, 1000);
+
+                                
+                                return text;
+                            }} />
+
+                            <AppTextInput noClickAction={true} action="cloud-upload" actionDoneIcon="cloud-done-outline" actionLoading={this.state.metricServerFilterLoading} actionComplete={this.state.metricServerFilterComplete} onAction={async () => {
+                                this.sendServerFilter();
+                            }} ref={this.metricServerFilterSearchBarRef} placeholder="Cloud metric filter (regex)" style={{ width: 400, alignSelf: 'center', borderTop: 0, borderTopLeftRadius: 0, borderBottomLeftRadius: 0, borderTopRightRadius: 0, borderLeftWidth: 0, fontFamily: 'Mono', fontWeight: 'bold'}} onChangeText={text => {
+
+                                if (this.state.forceLoading) return;
+
+                                clearTimeout(this.serverMetricFilterTimeout);
+
+                                //this.setState(update(this.state, { metricServerFilterTyping: {$set: true } }));
+
+                                this.serverMetricFilterTimeout = setTimeout(() => {
+                                    this.setState(update(this.state, { metricServerFilter: {$set: text }, metricServerFilterTyping: {$set: false } }), () => {
+
+                                        this.setState(update(this.state, { metricServerFilterComplete: {$set: text === this.state.metricServerFilterCompleteText } }));
+                                        this.sendServerFilter();
+                                    });
+                                }, 1000);
+
+                                
+                                return text;
+                            }} />
+                        </View>
+
+                        
                     </View>
                     
                     <TouchableOpacity disabled={this.state.metricFilter.length < 1 && this.state.metricServerFilter.length < 1} style={{ padding: 5, borderRadius: 5 }} onPress={async () => {
