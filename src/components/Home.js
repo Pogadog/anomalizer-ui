@@ -1053,59 +1053,63 @@ class Home extends Component {
                     </TouchableOpacity>
                 </View>
 
-                <View style={{ alignSelf: 'center', flexDirection: 'row', alignItems: 'center' }} >
-                    <TouchableOpacity onPress={() => {
-                        this.setState(update(this.state, { groupByStatus: {$set: !this.state.groupByStatus} }), () => {
-                            this.renderCharts();
+                <View style={{ flexDirection: 'column' }} >
+                    <View style={{ alignSelf: 'center', flexDirection: 'row', alignItems: 'center' }} >
+                        <TouchableOpacity onPress={() => {
+                            this.setState(update(this.state, { groupByStatus: {$set: !this.state.groupByStatus} }), () => {
+                                this.renderCharts();
+                            });
+                        }} >
+                            <MaterialCommunityIcons name={this.state.groupByStatus ? "checkbox-marked" : 'checkbox-blank-outline'} size={24} color={Theme.colors.palette.primary} />
+                        </TouchableOpacity>
+                        <View style={{ width: 2 }} />
+                        <AppText>Group by status</AppText>
+                    </View>
+
+                    <AppPicker ref={this.metricTypeDropdownRef} disabled={this.state.forceLoading} options={[
+                        
+                        {
+                            id: 'rstd',
+                            name: 'By RSTD'
+                        },
+                        {
+                            id: 'max',
+                            name: 'By Max'
+                        },
+                        {
+                            id: 'rmax',
+                            name: 'By -Max'
+                        },
+                        {
+                            id: 'spike',
+                            name: 'By Spike'
+                        },
+                        {
+                            id: 'mean',
+                            name: 'By Mean'
+                        },
+                        {
+                            id: 'std',
+                            name: 'By STD'
+                        },
+                        {
+                            id: 'alpha',
+                            name: 'By A-Z'
+                        },
+                        {
+                            id: 'cardinality',
+                            name: 'By Cardinality'
+                        },
+
+                    ]} currentOption={this.state.metricWeightPreference} onOptionChange={option => {
+                        this.setState(update(this.state, { metricWeightPreference: {$set: option}}), async () => {
+                            this.renderCharts(500);
                         });
-                    }} >
-                        <MaterialCommunityIcons name={this.state.groupByStatus ? "checkbox-marked" : 'checkbox-blank-outline'} size={24} color={Theme.colors.palette.primary} />
-                    </TouchableOpacity>
-                    <View style={{ width: 2 }} />
-                    <AppText>Group by status</AppText>
+
+                    }} pickerName="Sorting Weight Preference" />
                 </View>
 
-                <AppPicker ref={this.metricTypeDropdownRef} disabled={this.state.forceLoading} options={[
-                    
-                    {
-                        id: 'rstd',
-                        name: 'By RSTD'
-                    },
-                    {
-                        id: 'max',
-                        name: 'By Max'
-                    },
-                    {
-                        id: 'rmax',
-                        name: 'By -Max'
-                    },
-                    {
-                        id: 'spike',
-                        name: 'By Spike'
-                    },
-                    {
-                        id: 'mean',
-                        name: 'By Mean'
-                    },
-                    {
-                        id: 'std',
-                        name: 'By STD'
-                    },
-                    {
-                        id: 'alpha',
-                        name: 'By A-Z'
-                    },
-                    {
-                        id: 'cardinality',
-                        name: 'By Cardinality'
-                    },
-
-                ]} currentOption={this.state.metricWeightPreference} onOptionChange={option => {
-                    this.setState(update(this.state, { metricWeightPreference: {$set: option}}), async () => {
-                        this.renderCharts(500);
-                    });
-
-                }} pickerName="Sorting Weight Preference" />
+                
                 
                 {/* SEE NOTICE 1
                 <AppPicker ref={this.metricTypeDropdownRef} disabled={this.state.forceLoading} options={[
