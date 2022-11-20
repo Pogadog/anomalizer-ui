@@ -980,51 +980,42 @@ class Home extends Component {
                 
 
                 <View style={{ alignSelf: 'center', flexDirection: 'row', alignItems: 'center' }} >
-                    <View style={{ justifyContent: 'space-evenly' }} >
-                        <TouchableOpacity style={{ backgroundColor: !this.state.notEqualFilter ? 'transparent' : Theme.colors.palette.primary, padding: 5, borderRadius: 5 }} onPress={() => {
-                            clearTimeout(this.clientMetricNotEqualTimeout);
-                            this.setState(update(this.state, { notEqualFilter: {$set: !this.state.notEqualFilter} }), () => {
-                                this.clientMetricNotEqualTimeout = setTimeout(() => {
-                                    this.renderCharts();
-                                }, 500);
-                            });
-
-                            
-
-                        }} >
-                            <FontAwesome5 name="not-equal" size={16} color={this.state.notEqualFilter ? 'white' : Theme.colors.palette.primary} />
-                        </TouchableOpacity>
-                        <View style={{ height: 13 }} />
-                        <TouchableOpacity style={{ backgroundColor: !this.state.serverNotEqualFilter ? 'transparent' : Theme.colors.palette.primary, padding: 5, borderRadius: 5 }} onPress={() => {
-                            this.setState(update(this.state, { serverNotEqualFilter: {$set: !this.state.serverNotEqualFilter} }), () => {
-                                this.sendServerFilter();
-                            });
-                        }} >
-                            <FontAwesome5 name="not-equal" size={16} color={this.state.serverNotEqualFilter ? 'white' : Theme.colors.palette.primary} />
-                        </TouchableOpacity>
-                    </View>
-                    
-                    <View style={{ width: 5 }} />
                     <View style={{ flexDirection: 'column' }} >
                         <View style={{ flexDirection: 'row' }} >
-                            <AppTextInput ref={this.metricFilterSearchBarRef} placeholder="Local metric filter (regex)" style={{ width: 400, alignSelf: 'center', borderTopRightRadius: 0, borderBottomRightRadius: 0, borderBottomLeftRadius: 0, borderRightColor: 'lightgray', fontFamily: 'Mono', fontWeight: 'bold' }} onChangeText={text => {
-
-                                if (this.state.forceLoading) return;
-
-                                clearTimeout(this.clientMetricFilterTimeout);
-                                
-                                this.clientMetricFilterTimeout = setTimeout(() => {
-                                    this.setState(update(this.state, { metricFilter: {$set: text } }));
-                                    this.renderCharts();
-                                }, 500);
-                                return text;
-                            }} />
-
-                            <AppTextInput action="arrow-down-circle" actionDisabled={this.state.metricFilter.length < 1} onAction={() => {
+                            <AppTextInput leftActionPadding={40} leftActionComponent={<TouchableOpacity style={{ backgroundColor: !this.state.serverNotEqualFilter ? 'transparent' : Theme.colors.palette.primary, padding: 5, borderRadius: 5 }} onPress={() => {
+                                    this.setState(update(this.state, { serverNotEqualFilter: {$set: !this.state.serverNotEqualFilter} }), () => {
+                                        this.sendServerFilter();
+                                    });
+                                }} >
+                                    <FontAwesome5 name="not-equal" size={16} color={this.state.serverNotEqualFilter ? 'white' : Theme.colors.palette.primary} />
+                                </TouchableOpacity>} action="arrow-down-circle" actionDisabled={this.state.metricFilter.length < 1} onAction={() => {
                                 this.metricServerFilterSearchBarRef.current?.setValue(this.state.metricFilter);
                                 this.metricFilterSearchBarRef.current?.setValue('');
                                 
-                            }} ref={this.metricFilterSearchBarRef} placeholder="Local metric filter (regex)" style={{ width: 400, alignSelf: 'center', borderLeftWidth: 0, borderTopLeftRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, fontFamily: 'Mono', fontWeight: 'bold' }} onChangeText={text => {
+                            }} ref={this.metricFilterSearchBarRef} placeholder="Local metric filter 1 (regex)" style={{ width: 450, alignSelf: 'center', borderTopRightRadius: 0, borderBottomRightRadius: 0, borderBottomLeftRadius: 0, borderRightColor: 'lightgray', fontFamily: 'Mono', fontWeight: 'bold' }} onChangeText={text => {
+
+                                if (this.state.forceLoading) return;
+
+                                clearTimeout(this.clientMetricFilterTimeout);
+                                
+                                this.clientMetricFilterTimeout = setTimeout(() => {
+                                    this.setState(update(this.state, { metricFilter: {$set: text } }));
+                                    this.renderCharts();
+                                }, 500);
+                                return text;
+                            }} />
+
+                            <AppTextInput leftActionPadding={40} leftActionComponent={<TouchableOpacity style={{ backgroundColor: !this.state.serverNotEqualFilter ? 'transparent' : Theme.colors.palette.primary, padding: 5, borderRadius: 5 }} onPress={() => {
+                                    this.setState(update(this.state, { serverNotEqualFilter: {$set: !this.state.serverNotEqualFilter} }), () => {
+                                        this.sendServerFilter();
+                                    });
+                                }} >
+                                    <FontAwesome5 name="not-equal" size={16} color={this.state.serverNotEqualFilter ? 'white' : Theme.colors.palette.primary} />
+                                </TouchableOpacity>} action="arrow-down-circle" actionDisabled={this.state.metricFilter.length < 1} onAction={() => {
+                                this.metricServerFilterSearchBarRef.current?.setValue(this.state.metricFilter);
+                                this.metricFilterSearchBarRef.current?.setValue('');
+                                
+                            }} ref={this.metricFilterSearchBarRef} placeholder="Local metric filter 2 (regex)" style={{ width: 450, alignSelf: 'center', borderLeftWidth: 0, borderTopLeftRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, fontFamily: 'Mono', fontWeight: 'bold' }} onChangeText={text => {
 
                                 if (this.state.forceLoading) return;
 
@@ -1039,7 +1030,16 @@ class Home extends Component {
                         </View>
                         
                         <View style={{ flexDirection: 'row' }} >
-                            <AppTextInput ref={this.metricServerFilterSearchBarRef} placeholder="Cloud metric filter (regex)" style={{ width: 400, alignSelf: 'center', borderTop: 0, borderTopRightRadius: 0, borderBottomRightRadius: 0, borderTopLeftRadius: 0, borderRightColor: 'lightgray', fontFamily: 'Mono', fontWeight: 'bold'}} onChangeText={text => {
+                            <AppTextInput leftActionPadding={40} leftActionComponent={<TouchableOpacity style={{ backgroundColor: !this.state.serverNotEqualFilter ? 'transparent' : Theme.colors.palette.primary, padding: 5, borderRadius: 5 }} onPress={() => {
+                                    this.setState(update(this.state, { serverNotEqualFilter: {$set: !this.state.serverNotEqualFilter} }), () => {
+                                        this.sendServerFilter();
+                                    });
+                                }} >
+                                    <FontAwesome5 name="not-equal" size={16} color={this.state.serverNotEqualFilter ? 'white' : Theme.colors.palette.primary} />
+                                </TouchableOpacity>} noClickAction={true} action="cloud-upload" actionDoneIcon="cloud-done-outline" actionLoading={this.state.metricServerFilterLoading} actionComplete={this.state.metricServerFilterComplete} onAction={async () => {
+                                this.sendServerFilter();
+                            }}
+                            ref={this.metricServerFilterSearchBarRef} placeholder="Cloud metric filter 1 (regex)" style={{ width: 450, alignSelf: 'center', borderTop: 0, borderTopRightRadius: 0, borderBottomRightRadius: 0, borderTopLeftRadius: 0, borderRightColor: 'lightgray', fontFamily: 'Mono', fontWeight: 'bold'}} onChangeText={text => {
 
                                 if (this.state.forceLoading) return;
 
@@ -1059,9 +1059,15 @@ class Home extends Component {
                                 return text;
                             }} />
 
-                            <AppTextInput noClickAction={true} action="cloud-upload" actionDoneIcon="cloud-done-outline" actionLoading={this.state.metricServerFilterLoading} actionComplete={this.state.metricServerFilterComplete} onAction={async () => {
+                            <AppTextInput leftActionPadding={40} leftActionComponent={<TouchableOpacity style={{ backgroundColor: !this.state.serverNotEqualFilter ? 'transparent' : Theme.colors.palette.primary, padding: 5, borderRadius: 5 }} onPress={() => {
+                                    this.setState(update(this.state, { serverNotEqualFilter: {$set: !this.state.serverNotEqualFilter} }), () => {
+                                        this.sendServerFilter();
+                                    });
+                                }} >
+                                    <FontAwesome5 name="not-equal" size={16} color={this.state.serverNotEqualFilter ? 'white' : Theme.colors.palette.primary} />
+                                </TouchableOpacity>} noClickAction={true} action="cloud-upload" actionDoneIcon="cloud-done-outline" actionLoading={this.state.metricServerFilterLoading} actionComplete={this.state.metricServerFilterComplete} onAction={async () => {
                                 this.sendServerFilter();
-                            }} ref={this.metricServerFilterSearchBarRef} placeholder="Cloud metric filter (regex)" style={{ width: 400, alignSelf: 'center', borderTop: 0, borderTopLeftRadius: 0, borderBottomLeftRadius: 0, borderTopRightRadius: 0, borderLeftWidth: 0, fontFamily: 'Mono', fontWeight: 'bold'}} onChangeText={text => {
+                            }} ref={this.metricServerFilterSearchBarRef} placeholder="Cloud metric filter 2 (regex)" style={{ width: 450, alignSelf: 'center', borderTop: 0, borderTopLeftRadius: 0, borderBottomLeftRadius: 0, borderTopRightRadius: 0, borderLeftWidth: 0, fontFamily: 'Mono', fontWeight: 'bold'}} onChangeText={text => {
 
                                 if (this.state.forceLoading) return;
 
@@ -1084,12 +1090,7 @@ class Home extends Component {
 
                         
                     </View>
-                    
-                    <TouchableOpacity disabled={this.state.metricFilter.length < 1 && this.state.metricServerFilter.length < 1} style={{ padding: 5, borderRadius: 5 }} onPress={async () => {
-                        await this.metricFilters.add(this.state.metricFilter, this.state.metricServerFilter, { notEqual: this.state.notEqualFilter, serverNotEqual: this.state.serverNotEqualFilter });
-                    }} >
-                        <Ionicons name="save" size={24} color={(this.state.metricFilter.length < 1 && this.state.metricServerFilter.length < 1) ? 'gray' : Theme.colors.palette.primary} />
-                    </TouchableOpacity>
+
                 </View>
 
                 <View style={{ flexDirection: 'column' }} >
