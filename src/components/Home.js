@@ -37,7 +37,59 @@ class MetricFilters {
         this.key = 'metric_filters';
     }
 
+    createHash = (
+        filter1,
+        filter2,
+        serverFilter1,
+        serverFilter2,
+        notEqual1,
+        notEqual2,
+        serverNotEqual1,
+        serverNotEqual2
+    ) => {
+        return (
+            filter1 +
+            filter2 +
+            serverFilter1 +
+            serverFilter2 +
+            Boolean(notEqual1) +
+            Boolean(notEqual2) +
+            Boolean(serverNotEqual1) +
+            Boolean(serverNotEqual2)
+        )
+    }
+
     onFilters = async () => null
+
+    openCreateContext = async () => null;
+    onReturnFromCreateContext = async (context) => {
+        let name = context.__saveName;
+        delete context.__saveName;
+
+        let hash = this.createHash(
+            context.metricFilter1,
+            context.metricFilter2,
+            context.metricServerFilter1,
+            context.metricServerFilter2,
+            context.notEqualFilter1,
+            context.notEqualFilter2,
+            context.serverNotEqualFilter1,
+            context.serverNotEqualFilter2
+        )
+
+        //console.log("will set hash", hash);
+
+        this.filters[name] = { ts: Date.now(), name, hash, ...context }
+        await SecureStore.setItemAsync(this.key, JSON.stringify(this.filters));
+        await this.get();
+
+    }
+
+    openSelectContext = async () => null;
+    onReturnFromSelectContext = async () => null;
+
+    openDeleteContext = async () => null;
+    onReturnFromDeleteContext = async () => null;
 
     get = async () => {
         let data = await SecureStore.getItemAsync(this.key);
@@ -111,11 +163,15 @@ class MetricFilters {
         return filters;
     }
 
-    add = async (filter, serverFilter, claims) => {
+    add = async (claims) => {
+
+        this.openCreateContext(claims);
+        /*
         let filterCanonical = filter + serverFilter;
-        this.filters[filterCanonical] = { filter, serverFilter, ts: Date.now(), ...claims }
+        this.filters[filterCanonical] = { ts: Date.now(), ...claims }
         await SecureStore.setItemAsync(this.key, JSON.stringify(this.filters));
         await this.get();
+        */
     }
 
     remove = async (filterCanonical) => {
@@ -632,6 +688,7 @@ class Home extends Component {
             returnToScatter: null,
             
             metricFilters: [],
+            metricFiltersCreateContext: null,
 
             // group 1
             metricFilter1: '',
@@ -650,6 +707,8 @@ class Home extends Component {
             metricServer2FilterComplete: false,
             metricServer2FilterCompleteText: '',
             metricServer2FilterLoading: false,
+
+            filterHash: null,
 
             forceLoading: true,
             updateDurations: [],
@@ -871,6 +930,21 @@ class Home extends Component {
         if (this.state.forceLoading !== prevState.forceLoading && !this.state.forceLoading) {
             this.setState(update(this.state, { numberOfSentinels: {$set: this.setLoadingSentinelValues()} }));
         }
+
+        let filterHash = this.metricFilters.createHash(
+            this.state.metricFilter1,
+            this.state.metricFilter2,
+            this.state.metricServerFilter1,
+            this.state.metricServerFilter2,
+            this.state.notEqualFilter1,
+            this.state.notEqualFilter2,
+            this.state.serverNotEqualFilter1,
+            this.state.serverNotEqualFilter2,
+        );
+
+        //console.log("filter hash", filterHash);
+
+        this.state.filterHash !== filterHash && this.setState(update(this.state, { filterHash: {$set: filterHash} }));
     }
 
     componentDidMount = async () => {
@@ -879,6 +953,10 @@ class Home extends Component {
 
         this.metricFilters.onFilters = filters => {
             this.setState(update(this.state, {metricFilters: {$set: filters}}));
+        }
+
+        this.metricFilters.openCreateContext = (claims) => {
+            this.setState(update(this.state, { metricFiltersCreateContext: {$set: claims} }));
         }
 
         await this.metricFilters.get();
@@ -1107,7 +1185,7 @@ class Home extends Component {
                                         //this.setState(update(this.state, { metricServer1FilterComplete: {$set: text === this.state.metricServer1FilterCompleteText } }));
                                         this.sendServerFilter();
                                     });
-                                }, 1000);
+                                }, 500);
 
                                 
                                 return text;
@@ -1135,11 +1213,26 @@ class Home extends Component {
                                         //this.setState(update(this.state, { metricServer1FilterComplete: {$set: text === this.state.metricServer1FilterCompleteText } }));
                                         this.sendServerFilter();
                                     });
-                                }, 1000);
+                                }, 500);
 
                                 
                                 return text;
                             }} />
+                                <TouchableOpacity disabled={this.state.metricFilter1.length < 1 && this.state.metricServerFilter1.length < 1 && this.state.metricFilter2.length < 1 && this.state.metricServerFilter2.length < 1} style={{ padding: 5, borderRadius: 5 }} onPress={async () => {
+                                    await this.metricFilters.add({
+                                        metricFilter1: this.state.metricFilter1,
+                                        metricFilter2: this.state.metricFilter2,
+                                        metricServerFilter1: this.state.metricServerFilter1,
+                                        metricServerFilter2: this.state.metricServerFilter2,
+                                        notEqualFilter1: this.state.notEqualFilter1,
+                                        notEqualFilter2: this.state.notEqualFilter2,
+                                        serverNotEqualFilter1: this.state.serverNotEqualFilter1,
+                                        serverNotEqualFilter2: this.state.serverNotEqualFilter2
+                                    });
+                                }} >
+                                    <Ionicons name="save" size={24} color={(this.state.metricFilter1.length < 1 && this.state.metricServerFilter1.length < 1 && this.state.metricFilter2.length < 1 && this.state.metricServerFilter2.length < 1) ? 'gray' : Theme.colors.palette.primary} />
+                                </TouchableOpacity>
+                            
                         </View>
 
                         
@@ -1276,7 +1369,12 @@ class Home extends Component {
                 <ScrollView showsHorizontalScrollIndicator={false} horizontal={true} style={{ height: Dimensions.get('window').height * 0.05, width: "100%" }}  >
                     <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'center' }} >
                         {this.state.metricFilters.map((filter, index) => {
-                            let selected = filter.preset ? filter.filter in this.state.filterPresets : this.state.metricFilter1 === filter.filter && this.state.metricServerFilter1 === filter.serverFilter && this.state.notEqualFilter1 === filter.notEqual && this.state.serverNotEqualFilter1 === filter.serverNotEqual;
+
+                            //console.log(filter.hash, this.state.filterHash)
+
+                            let selected = filter.preset ? filter.filter in this.state.filterPresets : filter.hash === this.state.filterHash;
+
+                            //!filter.preset && console.log("filter.hash", filter.hash)
 
                             let shouldDisplaySeparator = (this.state.metricFilters[index - 1]?.preset === true && !filter.preset) || filter.displaySeparator;
 
@@ -1312,33 +1410,44 @@ class Home extends Component {
                                             });
                                         }
                                     } else {
-                                        if ((this.state.metricFilter1 === filter.filter && this.state.metricServerFilter1 === filter.serverFilter) && this.state.notEqualFilter1 === filter.notEqual && this.state.serverNotEqualFilter1 === filter.serverNotEqual) {
-                                            this.setState(update(this.state, { metricFilter1: {$set: ''}, metricServerFilter1: {$set: ''}, notEqualFilter1: {$set: false}, serverNotEqualFilter1: {$set: false} }), () => {
+
+                                        if (filter.hash === this.state.filterHash) {
+                                            this.setState(update(this.state, { notEqualFilter1: {$set: false}, notEqualFilter2: {$set: false}, serverNotEqualFilter1: {$set: false}, serverNotEqualFilter2: {$set: false}, filterHash: {$set: null }}), () => {
                                                 //this.sendServerFilter();
                                                 this.metricFilter1SearchBarRef.current?.setValue('');
                                                 this.metricServer1FilterSearchBarRef.current?.setValue('');
+                                                this.metricFilter2SearchBarRef.current?.setValue('');
+                                                this.metricServer2FilterSearchBarRef.current?.setValue('');
                                                 this.renderCharts();
                                             })
                                             
                                         } else {
-                                            this.setState(update(this.state, { notEqualFilter1: {$set: filter.notEqual}, serverNotEqualFilter1: {$set: filter.serverNotEqual} }), () => {
-                                                this.metricFilter1SearchBarRef.current?.setValue(filter.filter);
+
+                                            //console.log('filter', filter);
+
+                                            this.setState(update(this.state, { notEqualFilter1: {$set: filter.notEqualFilter1}, serverNotEqualFilter1: {$set: filter.serverNotEqualFilter1}, notEqualFilter2: {$set: filter.notEqualFilter2}, serverNotEqualFilter2: {$set: filter.serverNotEqualFilter2}, filterHash: {$set: filter.hash } }), () => {
+
+                                                this.metricFilter1SearchBarRef.current?.setValue(filter.metricFilter1);
+                                                this.metricFilter2SearchBarRef.current?.setValue(filter.metricFilter2);
+
+                                                this.metricServer1FilterSearchBarRef.current?.setValue(filter.metricServerFilter1);
+                                                
+
                                                 setTimeout(() => {
-                                                    this.metricServer1FilterSearchBarRef.current?.setValue(filter.serverFilter);
-                                                    setTimeout(() => {
-                                                        //this.sendServerFilter();
-                                                        this.renderCharts();
-                                                    }, 0);
-                                                }, 0);
+                                                    
+                                                    this.metricServer2FilterSearchBarRef.current?.setValue(filter.metricServerFilter2);
+
+                                                }, 500);
+
+                                                this.renderCharts();
                                             })
                                         }
                                     }
                                     
                                 }} >
 
-                                    {!!filter.filter && <AppText style={{ color: selected ? 'white' : filter.preset ? Theme.colors.palette.primary : 'black'}} >{!filter.preset && <Ionicons name="laptop-outline" style={{marginRight: 5}} />}{!!filter.notEqual && <FontAwesome5 name="not-equal" size={11} color={selected ? 'white' : "gray"} style={{ alignSelf: 'center', marginRight: 5 }} />}{filter.name ?? filter.filter}</AppText>}
+                                    <AppText style={{ color: selected ? 'white' : filter.preset ? Theme.colors.palette.primary : 'black'}} >{filter.name}</AppText>
 
-                                    {!!filter.serverFilter && <AppText style={{ color: selected ? 'white' : 'black'}} >{!!filter.filter && <AppText> &middot; </AppText>}<Ionicons name="cloud-outline" style={{ marginRight: 3 }} /> {!!filter.serverNotEqual && <FontAwesome5 name="not-equal" size={11} color={selected ? 'white' : "gray"} style={{ alignSelf: 'center', marginRight: 5 }} />}{filter.serverFilter}</AppText>}
 
                                     {filter.preset !== true && <TouchableOpacity style={{ marginLeft: 5, marginBottom: -5 }} onPress={async () => {
                                         await this.metricFilters.remove(filter.filterCanonical);
@@ -1543,8 +1652,6 @@ class Home extends Component {
                 onLoad={async () => {
 
                     let figure;
-
-                    console.log(this.state.showInfoData);
 
                     if (this.state.showInfoData.chartB) {
 
@@ -1788,6 +1895,54 @@ class Home extends Component {
                 show={this.state.showHudInfo}
                 onAction={action => {
                     this.setState(update(this.state, {showHudInfo: {$set: false}}));
+                }}
+            />
+
+            <HoverContextMenu 
+                options={[
+                    {
+                        id: 'save',
+                        name: 'Save',
+                        disabled: !this.state.metricFiltersCreateContext?.__saveName || this.state.metricFiltersCreateContext?.__saveName?.length < 1
+                    },
+                    {
+                        id: 'cancel',
+                        name: 'Cancel'
+                    }
+                ]}
+                headerComponent={() => {
+                    
+                    if (!this.state.metricFiltersCreateContext) return null;
+
+                    return <View style={{ alignItems: 'center', justifyContent: 'center', padding: 20, width: "100%" }} >
+                        <AppText tag="h2" >Save Filter</AppText>
+
+                        <View style={{ height: 5 }} />
+
+                        <AppText tag="p" >Local filter 1: {this.state.metricFiltersCreateContext.notEqualFilter1 && <FontAwesome5 name="not-equal" size={12} color="gray" />} {this.state.metricFiltersCreateContext.metricFilter1 || <AppText style={{ color: "gray", fontStyle: "italic" }} >none</AppText>}</AppText>
+
+                        <AppText tag="p" >Local filter 2: {this.state.metricFiltersCreateContext.notEqualFilter2 && <FontAwesome5 name="not-equal" size={12} color="gray" />} {this.state.metricFiltersCreateContext.metricFilter2 || <AppText style={{ color: "gray", fontStyle: "italic" }} >none</AppText>}</AppText>
+
+                        <AppText tag="p" >Cloud filter 1: {this.state.metricFiltersCreateContext.serverNotEqualFilter1 && <FontAwesome5 name="not-equal" size={12} color="gray" />} {this.state.metricFiltersCreateContext.metricServerFilter1 || <AppText style={{ color: "gray", fontStyle: "italic" }} >none</AppText>}</AppText>
+
+                        <AppText tag="p" >Cloud filter 2: {this.state.metricFiltersCreateContext.serverNotEqualFilter2 && <FontAwesome5 name="not-equal" size={12} color="gray" />} {this.state.metricFiltersCreateContext.metricServerFilter2 || <AppText style={{ color: "gray", fontStyle: "italic" }} >none</AppText>}</AppText>
+
+                        <View style={{ height: 5 }} />
+
+                        <AppTextInput style={{ paddingLeft: 5, paddingRight: 5, width: 400 }} placeholder="Give this filter a name..." onChangeText={text => {
+                            this.setState(update(this.state, { metricFiltersCreateContext: { __saveName : {$set: text}} }));
+                            return text;
+                        }} />
+                        
+                    </View>
+                }}
+                show={this.state.metricFiltersCreateContext}
+                onAction={action => {
+                    if (action === 'save') {
+                        //console.log("will return with", this.state.metricFiltersCreateContext);
+                        this.metricFilters.onReturnFromCreateContext({...this.state.metricFiltersCreateContext});
+                    }
+                    this.setState(update(this.state, {metricFiltersCreateContext: {$set: null}}));
                 }}
             />
             

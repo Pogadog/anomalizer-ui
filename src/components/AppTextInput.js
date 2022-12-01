@@ -90,7 +90,7 @@ class AppTextInput extends Component {
                         </View>}
                         <TextInput 
                             keyboardType={this.props.keyboardType}
-                            style={{...style.main, fontSize: this.props.disableAutoFontSize ? this.props.disableAutoFontSize :  this.state.fontSize >= this.props.fontSizeAutoAdjust?.min ? this.state.fontSize : this.props.fontSizeAutoAdjust?.min || this.defaultFontSize, ...this.props.style, color: darkMode.enabled ? "white" : 'black', borderWidth: 1, borderColor: ThemeValues.colors.palette.primary, paddingRight: this.props.action ? 40 : 0, paddingLeft: this.props.leftActionComponent ? this.props.leftActionPadding ?? 40 : 0}}
+                            style={{...style.main, fontSize: this.props.disableAutoFontSize ? this.props.disableAutoFontSize :  this.state.fontSize >= this.props.fontSizeAutoAdjust?.min ? this.state.fontSize : this.props.fontSizeAutoAdjust?.min || this.defaultFontSize, color: darkMode.enabled ? "white" : 'black', borderWidth: 1, borderColor: ThemeValues.colors.palette.primary, paddingRight: this.props.action ? 40 : 0, paddingLeft: this.props.leftActionComponent ? this.props.leftActionPadding ?? 40 : 0, ...this.props.style}}
                             onChangeText={this.onChangeText}
                             value={this.state.value}
                             defaultValue={this.props.initialValue}
