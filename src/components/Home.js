@@ -216,7 +216,7 @@ class ChartData {
         await SecureStore.setItemAsync(this.updateIntervalTimeKey, String(time));
     }
 
-    setServerSideFilter = async (query, notEqual, restart=true) => {
+    setServerSideFilter = async (query, notEqual, query2, notEqual2, restart=true) => {
 
         restart && this.stopUpdates();
 
@@ -226,14 +226,13 @@ class ChartData {
                 'Accept-Type': 'application/json',
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ query, invert: notEqual })
+            body: JSON.stringify({ query, invert: notEqual, query2, invert2: notEqual2 })
         });
 
         this.serverSideFilterQuery = query;
 
         restart && await this.startUpdates();
 
-        
 
     }
 
@@ -619,7 +618,7 @@ class Home extends Component {
             chartStatuses: {},
             chartSortOption: 'critical_first',
             metricType: '',
-            metricWeightPreference: 'rstd',
+            metricWeightPreference: 'features',
             chartLimit: 0,
             chartLoading: false,
             chartUpdateKey: String(Date.now()),
@@ -630,12 +629,17 @@ class Home extends Component {
             returnToScatter: null,
             metricFilter: '',
             metricServerFilter: '',
+            metricFilter2: '',
+            metricServerFilter2: '',
             metricFilters: [],
             metricServerFilterComplete: false,
             metricServerFilterCompleteText: '',
+            metricServerFilterCompleteText2: '',
             metricServerFilterLoading: false,
             notEqualFilter: false,
             serverNotEqualFilter: false,
+            notEqualFilter2: false,
+            serverNotEqualFilter2: false,
             forceLoading: true,
             updateDurations: [],
             totalServerMetrics: 0,
@@ -664,6 +668,8 @@ class Home extends Component {
 
         this.metricFilterSearchBarRef = React.createRef();
         this.metricServerFilterSearchBarRef = React.createRef();
+        this.metricFilterSearchBarRef2 = React.createRef();
+        this.metricServerFilterSearchBarRef2 = React.createRef();
         this.showInfoMetricTagFilterRef = React.createRef();
 
         this.metricTypeDropdownRef = React.createRef();
@@ -678,7 +684,8 @@ class Home extends Component {
     sendServerFilter = () => {
         setTimeout(() => {
             this.setState(update(this.state, { metricServerFilterLoading: {$set: true} }), async () => {
-                await this.chartData.setServerSideFilter(this.state.metricServerFilter, this.state.serverNotEqualFilter);
+                await this.chartData.setServerSideFilter(this.state.metricServerFilter, this.state.serverNotEqualFilter,
+                    this.state.metricServerFilter2, this.state.serverNotEqualFilter2);
                 this.setState(update(this.state, { metricServerFilterLoading: {$set: false}, metricServerFilterComplete: {$set: true}, metricServerFilterCompleteText: {$set: this.state.metricServerFilter }}));
             });
         }, 0);
@@ -710,8 +717,8 @@ class Home extends Component {
                     delete chart.features.decreasing;
                 }
 
-                if (this.state.metricFilter.length) {
-                    try {
+                try {
+                    if (this.state.metricFilter?.length) {
                         if (this.state.notEqualFilter) {
                             if (searchString.match(`${this.state.metricFilter}`)) {
                                 continue;
@@ -721,13 +728,23 @@ class Home extends Component {
                                 continue;
                             }
                         }
-                        
-                    } catch (e) {
-                        console.error('e', e);
-                        continue;
                     }
-                    
+                    if (this.state.metricFilter2?.length) {
+                        if (this.state.notEqualFilter2) {
+                            if (searchString.match(`${this.state.metricFilter2}`)) {
+                                continue;
+                            }
+                        } else {
+                            if (!searchString.match(`${this.state.metricFilter2}`)) {
+                                continue;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('e', e);
+                    continue;
                 }
+                    
 
                 let priorityFilters = Object.keys(this.state.filterPresets).map(f => {
                     if (this.state.filterPresets[f].priority) {
@@ -770,16 +787,18 @@ class Home extends Component {
                     if (!presetMatch) continue;
                 }
 
-                let weight = (
+                let weight = this.state.metricWeightPreference === 'cluster' ? chart.features.cluster ?? 0: 
+                ((
                     this.state.metricWeightPreference === 'alpha' ? -chart.metric.charCodeAt(0): 
                     this.state.metricWeightPreference === 'spike' ? chart.stats.spike: 
                     this.state.metricWeightPreference === 'rstd' ? chart.stats.rstd : 
+                    this.state.metricWeightPreference === 'features' ? chart.features.normalized_features ?? 0: 
                     this.state.metricWeightPreference === 'max' ? chart.stats.max : 
                     this.state.metricWeightPreference === 'cardinality' ? chart.tags.length :
                     this.state.metricWeightPreference === 'rmax' ? chart.stats.rmax : 
                     this.state.metricWeightPreference === 'mean' ? chart.stats.mean : 
-                    chart.stats.std) + Math.abs((chart.features.increasing?.increase ?? 0) + (chart.features.decreasing?.decrease ?? 0)) + (Math.abs(chart.features.hockeystick?.increasing || chart.features.hockeystick?.increasing || 0)); 
-
+                    chart.stats.std) + Math.abs((chart.features.increasing?.increase ?? 0) + (chart.features.decreasing?.decrease ?? 0)) + (Math.abs(chart.features.hockeystick?.increasing || chart.features.hockeystick?.increasing || 0)) 
+                );
                 chartStates[chart.status].push({...chart, id: chartId, weight});
 
             }
@@ -845,9 +864,14 @@ class Home extends Component {
 
         let filter = await (await AppFetch(await Endpoints('filter'))).json();
 
-        this.setState(update(this.state, { metricServerFilter: {$set: filter.query}, serverNotEqualFilter: {$set: filter.invert }, filterPresets: {"plot.*timeseries": {$set: { priority: 1 }}} }));
+        this.setState(update(this.state, { 
+            metricServerFilter: {$set: filter.query}, serverNotEqualFilter: {$set: filter.invert }, 
+            metricServerFilter2: {$set: filter.query2}, serverNotEqualFilter2: {$set: filter.invert2 },
+            filterPresets: {"plot.*timeseries": {$set: { priority: 1 }}} 
+        }));
         
         this.metricServerFilterSearchBarRef.current?.setValue(filter.query);
+        this.metricServerFilterSearchBarRef2.current?.setValue(filter.query2);
 
         this.chartData.onChartUpdate = (charts) => {
             this.setState(update(this.state, { charts: {$set: charts} }), () => {
@@ -1016,6 +1040,8 @@ class Home extends Component {
 
                             clearTimeout(this.clientMetricFilterTimeout);
                             
+                            if (this.state.forceLoading) return;
+
                             this.clientMetricFilterTimeout = setTimeout(() => {
                                 this.setState(update(this.state, { metricFilter: {$set: text } }));
                                 this.renderCharts();
@@ -1025,7 +1051,7 @@ class Home extends Component {
 
                         <AppTextInput noClickAction={true} action="cloud-upload" actionDoneIcon="cloud-done-outline" actionLoading={this.state.metricServerFilterLoading} actionComplete={this.state.metricServerFilterComplete} onAction={async () => {
                             this.sendServerFilter();
-                        }} ref={this.metricServerFilterSearchBarRef} placeholder="Cloud metric filter (regex)" style={{ width: 400, alignSelf: 'center', borderTop: 0, borderTopRightRadius: 0, borderTopLeftRadius: 0, fontFamily: 'Mono', fontWeight: 'bold'}} onChangeText={text => {
+                        }} ref={this.metricServerFilterSearchBarRef} placeholder="Server metric filter (regex)" style={{ width: 400, alignSelf: 'center', borderTop: 0, borderTopRightRadius: 0, borderTopLeftRadius: 0, fontFamily: 'Mono', fontWeight: 'bold'}} onChangeText={text => {
 
                             if (this.state.forceLoading) return;
 
@@ -1045,6 +1071,67 @@ class Home extends Component {
                             return text;
                         }} />
                     </View>
+
+                    <View style={{ justifyContent: 'space-evenly' }} >
+                        <TouchableOpacity style={{ backgroundColor: !this.state.notEqualFilter2 ? 'transparent' : Theme.colors.palette.primary, padding: 5, borderRadius: 5 }} onPress={() => {
+                            clearTimeout(this.clientMetricNotEqualTimeout);
+                            this.setState(update(this.state, { notEqualFilter2: {$set: !this.state.notEqualFilter2} }), () => {
+                                this.clientMetricNotEqualTimeout = setTimeout(() => {
+                                    this.renderCharts();
+                                }, 500);
+                            });
+
+                            
+
+                        }} >
+                            <FontAwesome5 name="not-equal" size={16} color={this.state.notEqualFilter2 ? 'white' : Theme.colors.palette.primary} />
+                        </TouchableOpacity>
+                        <View style={{ height: 13 }} />
+                        <TouchableOpacity style={{ backgroundColor: !this.state.serverNotEqualFilter2 ? 'transparent' : Theme.colors.palette.primary, padding: 5, borderRadius: 5 }} onPress={() => {
+                            this.setState(update(this.state, { serverNotEqualFilter2: {$set: !this.state.serverNotEqualFilter2} }), () => {
+                                this.sendServerFilter();
+                            });
+                        }} >
+                            <FontAwesome5 name="not-equal" size={16} color={this.state.serverNotEqualFilter2 ? 'white' : Theme.colors.palette.primary} />
+                        </TouchableOpacity>
+                    </View>
+                    
+                    <View style={{ width: 5 }} />
+                    <View >
+                        <AppTextInput action="arrow-down-circle" actionDisabled={this.state.metricFilter2.length < 1} onAction={() => {
+                            this.metricServerFilterSearchBarRef2.current?.setValue(this.state.metricFilter2);
+                            this.metricFilterSearchBarRef2.current?.setValue('');
+                            
+                        }} ref={this.metricFilterSearchBarRef2} placeholder="UI metric filter (regex)" style={{ width: 400, alignSelf: 'center', borderBottomRightRadius: 0, borderBottomLeftRadius: 0, fontFamily: 'Mono', fontWeight: 'bold' }} onChangeText={text => {
+                            clearTimeout(this.clientMetricFilterTimeout);
+                            
+                            this.clientMetricFilterTimeout = setTimeout(() => {
+                                this.setState(update(this.state, { metricFilter2: {$set: text } }));
+                                this.renderCharts();
+                            }, 500);
+                            return text;
+                        }} />
+
+                        <AppTextInput noClickAction={true} action="cloud-upload" actionDoneIcon="cloud-done-outline" actionLoading={this.state.metricServerFilterLoading} actionComplete={this.state.metricServerFilterComplete} onAction={async () => {
+                            this.sendServerFilter();
+                        }} ref={this.metricServerFilterSearchBarRef2} placeholder="Server metric filter (regex)" style={{ width: 400, alignSelf: 'center', borderTop: 0, borderTopRightRadius: 0, borderTopLeftRadius: 0, fontFamily: 'Mono', fontWeight: 'bold'}} onChangeText={text => {
+
+                            clearTimeout(this.serverMetricFilterTimeout);
+
+                            //this.setState(update(this.state, { metricServerFilterTyping: {$set: true } }));
+
+                            this.serverMetricFilterTimeout = setTimeout(() => {
+                                this.setState(update(this.state, { metricServerFilter2: {$set: text }, metricServerFilterTyping: {$set: false } }), () => {
+
+                                    this.setState(update(this.state, { metricServerFilterComplete2: {$set: text === this.state.metricServerFilterCompleteText2 } }));
+                                    this.sendServerFilter();
+                                });
+                            }, 1000);
+
+                            
+                            return text;
+                        }} />
+                    </View>                    
                     
                     <TouchableOpacity disabled={this.state.metricFilter.length < 1 && this.state.metricServerFilter.length < 1} style={{ padding: 5, borderRadius: 5 }} onPress={async () => {
                         await this.metricFilters.add(this.state.metricFilter, this.state.metricServerFilter, { notEqual: this.state.notEqualFilter, serverNotEqual: this.state.serverNotEqualFilter });
@@ -1067,6 +1154,14 @@ class Home extends Component {
 
                 <AppPicker ref={this.metricTypeDropdownRef} disabled={this.state.forceLoading} options={[
                     
+                    {
+                        id: 'features',
+                        name: 'By Features'
+                    },
+                    {
+                        id: 'cluster',
+                        name: 'By Cluster'
+                    },
                     {
                         id: 'rstd',
                         name: 'By RSTD'
@@ -1380,6 +1475,7 @@ class Home extends Component {
                                     let matchingTags = [];
                                     for (let tag in tagSearchStrings) {
                                         let searchString = tagSearchStrings[tag];
+                                        console.log(searchString)
                                         if (searchString.match(`${text}`) || text.length < 1) {
                                             matchingTags.push(tag);
                                         }
@@ -1720,18 +1816,13 @@ class Home extends Component {
             </View>
         } else {
             return <View style={{ alignItems: 'center', marginTop: 20 }} >
-                <AppText tag="h4" style={{ alignSelf: 'center' }} >No metrics to display{this.state.metricFilter.length ? ' for this filter' : ''}</AppText>
+                <AppText tag="h4" style={{ alignSelf: 'center' }} >No metrics to display{this.state.metricFilter?.length || this.state.metricFilter2?.length ? ' for these filters' : ''}</AppText>
                 <View style={{ height: 10 }} />
 
-                <Button name={"Change the metric type"} icon={{name: "swap-horizontal"}} onPress={() => {
-                    this.metricTypeDropdownRef.current?.toggle();
+                <Button name={"Change the metric filters"} icon={{name: "swap-horizontal"}} onPress={() => {
                 }} />
 
                 <View style={{ height: 10 }} />
-
-                <Button name={"Change the number of metrics"} icon={{name: "albums-outline"}} onPress={() => {
-                    this.metricNumberDropdownRef.current?.toggle();
-                }} />
 
                 <View style={{ height: 10 }} />
 
