@@ -37,7 +37,59 @@ class MetricFilters {
         this.key = 'metric_filters';
     }
 
+    createHash = (
+        filter1,
+        filter2,
+        serverFilter1,
+        serverFilter2,
+        notEqual1,
+        notEqual2,
+        serverNotEqual1,
+        serverNotEqual2
+    ) => {
+        return (
+            filter1 +
+            filter2 +
+            serverFilter1 +
+            serverFilter2 +
+            Boolean(notEqual1) +
+            Boolean(notEqual2) +
+            Boolean(serverNotEqual1) +
+            Boolean(serverNotEqual2)
+        )
+    }
+
     onFilters = async () => null
+
+    openCreateContext = async () => null;
+    onReturnFromCreateContext = async (context) => {
+        let name = context.__saveName;
+        delete context.__saveName;
+
+        let hash = this.createHash(
+            context.metricFilter1,
+            context.metricFilter2,
+            context.metricServerFilter1,
+            context.metricServerFilter2,
+            context.notEqualFilter1,
+            context.notEqualFilter2,
+            context.serverNotEqualFilter1,
+            context.serverNotEqualFilter2
+        )
+
+        //console.log("will set hash", hash);
+
+        this.filters[name] = { ts: Date.now(), name, hash, ...context }
+        await SecureStore.setItemAsync(this.key, JSON.stringify(this.filters));
+        await this.get();
+
+    }
+
+    openSelectContext = async () => null;
+    onReturnFromSelectContext = async () => null;
+
+    openDeleteContext = async () => null;
+    onReturnFromDeleteContext = async () => null;
 
     get = async () => {
         let data = await SecureStore.getItemAsync(this.key);
@@ -111,11 +163,15 @@ class MetricFilters {
         return filters;
     }
 
-    add = async (filter, serverFilter, claims) => {
+    add = async (claims) => {
+
+        this.openCreateContext(claims);
+        /*
         let filterCanonical = filter + serverFilter;
-        this.filters[filterCanonical] = { filter, serverFilter, ts: Date.now(), ...claims }
+        this.filters[filterCanonical] = { ts: Date.now(), ...claims }
         await SecureStore.setItemAsync(this.key, JSON.stringify(this.filters));
         await this.get();
+        */
     }
 
     remove = async (filterCanonical) => {
@@ -216,9 +272,11 @@ class ChartData {
         await SecureStore.setItemAsync(this.updateIntervalTimeKey, String(time));
     }
 
-    setServerSideFilter = async (query, notEqual, restart=true) => {
+    setServerSideFilter = async (filter1, notEqual1, filter2, notEqual2, restart=true) => {
 
         restart && this.stopUpdates();
+
+        //console.log('send', { query: filter1, query2: filter2, invert: notEqual1, invert2: notEqual2 });
 
         let r = await AppFetch(await Endpoints('filter'), { 
             method: 'POST',
@@ -226,10 +284,10 @@ class ChartData {
                 'Accept-Type': 'application/json',
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ query, invert: notEqual })
+            body: JSON.stringify({ query: filter1, query2: filter2, invert: notEqual1, invert2: notEqual2 })
         });
 
-        this.serverSideFilterQuery = query;
+        //this.serverSideFilterQuery = query;
 
         restart && await this.startUpdates();
 
@@ -628,14 +686,30 @@ class Home extends Component {
             showInfoData: null,
             showInfoRefresh: String(Date.now()),
             returnToScatter: null,
-            metricFilter: '',
-            metricServerFilter: '',
+            
             metricFilters: [],
-            metricServerFilterComplete: false,
-            metricServerFilterCompleteText: '',
-            metricServerFilterLoading: false,
-            notEqualFilter: false,
-            serverNotEqualFilter: false,
+            metricFiltersCreateContext: null,
+
+            // group 1
+            metricFilter1: '',
+            metricServerFilter1: '',
+            notEqualFilter1: false,
+            serverNotEqualFilter1: false,
+            metricServer1FilterComplete: false,
+            metricServer1FilterCompleteText: '',
+            metricServer1FilterLoading: false,
+            
+            // group 2
+            metricFilter2: '',
+            metricServerFilter2: '',
+            notEqualFilter2: false,
+            serverNotEqualFilter2: false,
+            metricServer2FilterComplete: false,
+            metricServer2FilterCompleteText: '',
+            metricServer2FilterLoading: false,
+
+            filterHash: null,
+
             forceLoading: true,
             updateDurations: [],
             totalServerMetrics: 0,
@@ -662,8 +736,14 @@ class Home extends Component {
             groupByStatus: true
         }
 
-        this.metricFilterSearchBarRef = React.createRef();
-        this.metricServerFilterSearchBarRef = React.createRef();
+        // group 1
+        this.metricFilter1SearchBarRef = React.createRef();
+        this.metricServer1FilterSearchBarRef = React.createRef();
+
+        // group 2
+        this.metricFilter2SearchBarRef = React.createRef();
+        this.metricServer2FilterSearchBarRef = React.createRef();
+
         this.showInfoMetricTagFilterRef = React.createRef();
 
         this.metricTypeDropdownRef = React.createRef();
@@ -677,9 +757,11 @@ class Home extends Component {
 
     sendServerFilter = () => {
         setTimeout(() => {
-            this.setState(update(this.state, { metricServerFilterLoading: {$set: true} }), async () => {
-                await this.chartData.setServerSideFilter(this.state.metricServerFilter, this.state.serverNotEqualFilter);
-                this.setState(update(this.state, { metricServerFilterLoading: {$set: false}, metricServerFilterComplete: {$set: true}, metricServerFilterCompleteText: {$set: this.state.metricServerFilter }}));
+            this.setState(update(this.state, { metricServer1FilterLoading: {$set: true} }), async () => {
+
+                await this.chartData.setServerSideFilter(this.state.metricServerFilter1, this.state.serverNotEqualFilter1, this.state.metricServerFilter2, this.state.serverNotEqualFilter2, this.state.metric);
+                
+                this.setState(update(this.state, { metricServer1FilterLoading: {$set: false}, metricServer1FilterComplete: {$set: true}, metricServer1FilterCompleteText: {$set: this.state.metricServerFilter1 }}));
             });
         }, 0);
         
@@ -710,14 +792,33 @@ class Home extends Component {
                     delete chart.features.decreasing;
                 }
 
-                if (this.state.metricFilter.length) {
+                if (this.state.metricFilter1.length) {
                     try {
-                        if (this.state.notEqualFilter) {
-                            if (searchString.match(`${this.state.metricFilter}`)) {
+                        if (this.state.notEqualFilter1) {
+                            if (searchString.match(`${this.state.metricFilter1}`)) {
                                 continue;
                             }
                         } else {
-                            if (!searchString.match(`${this.state.metricFilter}`)) {
+                            if (!searchString.match(`${this.state.metricFilter1}`)) {
+                                continue;
+                            }
+                        }
+                        
+                    } catch (e) {
+                        console.error('e', e);
+                        continue;
+                    }
+                    
+                }
+
+                if (this.state.metricFilter2.length) {
+                    try {
+                        if (this.state.notEqualFilter2) {
+                            if (searchString.match(`${this.state.metricFilter2}`)) {
+                                continue;
+                            }
+                        } else {
+                            if (!searchString.match(`${this.state.metricFilter2}`)) {
                                 continue;
                             }
                         }
@@ -829,6 +930,21 @@ class Home extends Component {
         if (this.state.forceLoading !== prevState.forceLoading && !this.state.forceLoading) {
             this.setState(update(this.state, { numberOfSentinels: {$set: this.setLoadingSentinelValues()} }));
         }
+
+        let filterHash = this.metricFilters.createHash(
+            this.state.metricFilter1,
+            this.state.metricFilter2,
+            this.state.metricServerFilter1,
+            this.state.metricServerFilter2,
+            this.state.notEqualFilter1,
+            this.state.notEqualFilter2,
+            this.state.serverNotEqualFilter1,
+            this.state.serverNotEqualFilter2,
+        );
+
+        //console.log("filter hash", filterHash);
+
+        this.state.filterHash !== filterHash && this.setState(update(this.state, { filterHash: {$set: filterHash} }));
     }
 
     componentDidMount = async () => {
@@ -839,15 +955,22 @@ class Home extends Component {
             this.setState(update(this.state, {metricFilters: {$set: filters}}));
         }
 
+        this.metricFilters.openCreateContext = (claims) => {
+            this.setState(update(this.state, { metricFiltersCreateContext: {$set: claims} }));
+        }
+
         await this.metricFilters.get();
 
         // default server filter and select timeseries only on init
 
         let filter = await (await AppFetch(await Endpoints('filter'))).json();
 
-        this.setState(update(this.state, { metricServerFilter: {$set: filter.query}, serverNotEqualFilter: {$set: filter.invert }, filterPresets: {"plot.*timeseries": {$set: { priority: 1 }}} }));
         
-        this.metricServerFilterSearchBarRef.current?.setValue(filter.query);
+
+        this.setState(update(this.state, { metricServerFilter1: {$set: filter.query}, serverNotEqualFilter1: {$set: filter.invert }, metricServerFilter2: {$set: filter.query2}, serverNotEqualFilter2: {$set: filter.invert2}, filterPresets: {"plot.*timeseries": {$set: { priority: 1 }}} }));
+        
+        this.metricServer1FilterSearchBarRef.current?.setValue(filter.query);
+        this.metricServer2FilterSearchBarRef.current?.setValue(filter.query2);
 
         this.chartData.onChartUpdate = (charts) => {
             this.setState(update(this.state, { charts: {$set: charts} }), () => {
@@ -980,132 +1103,200 @@ class Home extends Component {
                 
 
                 <View style={{ alignSelf: 'center', flexDirection: 'row', alignItems: 'center' }} >
-                    <View style={{ justifyContent: 'space-evenly' }} >
-                        <TouchableOpacity style={{ backgroundColor: !this.state.notEqualFilter ? 'transparent' : Theme.colors.palette.primary, padding: 5, borderRadius: 5 }} onPress={() => {
-                            clearTimeout(this.clientMetricNotEqualTimeout);
-                            this.setState(update(this.state, { notEqualFilter: {$set: !this.state.notEqualFilter} }), () => {
-                                this.clientMetricNotEqualTimeout = setTimeout(() => {
+                    <View style={{ flexDirection: 'column' }} >
+                        <View style={{ flexDirection: 'row' }} >
+                            <AppTextInput leftActionPadding={40} leftActionComponent={<TouchableOpacity style={{ backgroundColor: !this.state.notEqualFilter1 ? 'transparent' : Theme.colors.palette.primary, padding: 5, borderRadius: 5 }} onPress={() => {
+                                    this.setState(update(this.state, { notEqualFilter1: {$set: !this.state.notEqualFilter1} }), () => {
+                                        setTimeout(() => {
+                                            this.renderCharts();
+                                        }, 500);
+                                        
+                                    });
+                                }} >
+                                    <FontAwesome5 name="not-equal" size={16} color={this.state.notEqualFilter1 ? 'white' : Theme.colors.palette.primary} />
+                                </TouchableOpacity>} action="arrow-down-circle" actionDisabled={this.state.metricFilter1.length < 1} onAction={() => {
+                                    this.setState(update(this.state, { serverNotEqualFilter1: {$set: this.state.notEqualFilter1 }, notEqualFilter1: {$set: false} }), () => {
+                                        this.metricServer1FilterSearchBarRef.current?.setValue(this.state.metricFilter1);
+                                        this.metricFilter1SearchBarRef.current?.setValue('');
+                                    });
+                                
+                            }} ref={this.metricFilter1SearchBarRef} placeholder="Local metric filter 1 (regex)" style={{ width: 450, alignSelf: 'center', borderTopRightRadius: 0, borderBottomRightRadius: 0, borderBottomLeftRadius: 0, fontFamily: 'Mono', fontWeight: 'bold' }} onChangeText={text => {
+
+                                if (this.state.forceLoading) return;
+
+                                clearTimeout(this.clientMetricFilterTimeout);
+                                
+                                this.clientMetricFilterTimeout = setTimeout(() => {
+                                    this.setState(update(this.state, { metricFilter1: {$set: text } }));
                                     this.renderCharts();
                                 }, 500);
-                            });
+                                return text;
+                            }} />
 
-                            
+                            <AppTextInput leftActionPadding={40} leftActionComponent={<TouchableOpacity style={{ backgroundColor: !this.state.notEqualFilter2 ? 'transparent' : Theme.colors.palette.primary, padding: 5, borderRadius: 5 }} onPress={() => {
+                                    this.setState(update(this.state, { notEqualFilter2: {$set: !this.state.notEqualFilter2} }), () => {
+                                        setTimeout(() => {
+                                            this.renderCharts();
+                                        }, 500);
+                                        
+                                    });
+                                }} >
+                                    <FontAwesome5 name="not-equal" size={16} color={this.state.notEqualFilter2 ? 'white' : Theme.colors.palette.primary} />
+                                </TouchableOpacity>} action="arrow-down-circle" actionDisabled={this.state.metricFilter2.length < 1} onAction={() => {
+                                this.setState(update(this.state, { serverNotEqualFilter2: {$set: this.state.notEqualFilter2}, notEqualFilter2: {$set: false} }));
+                                this.metricServer2FilterSearchBarRef.current?.setValue(this.state.metricFilter2);
+                                this.metricFilter2SearchBarRef.current?.setValue('');
+                                
+                            }} ref={this.metricFilter2SearchBarRef} placeholder="Local metric filter 2 (regex)" style={{ width: 450, alignSelf: 'center', borderLeftWidth: 0, borderTopLeftRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, fontFamily: 'Mono', fontWeight: 'bold' }} onChangeText={text => {
 
-                        }} >
-                            <FontAwesome5 name="not-equal" size={16} color={this.state.notEqualFilter ? 'white' : Theme.colors.palette.primary} />
-                        </TouchableOpacity>
-                        <View style={{ height: 13 }} />
-                        <TouchableOpacity style={{ backgroundColor: !this.state.serverNotEqualFilter ? 'transparent' : Theme.colors.palette.primary, padding: 5, borderRadius: 5 }} onPress={() => {
-                            this.setState(update(this.state, { serverNotEqualFilter: {$set: !this.state.serverNotEqualFilter} }), () => {
+                                if (this.state.forceLoading) return;
+
+                                clearTimeout(this.clientMetricFilter2Timeout);
+                                
+                                this.clientMetricFilter2Timeout = setTimeout(() => {
+                                    this.setState(update(this.state, { metricFilter2: {$set: text } }));
+                                    this.renderCharts();
+                                }, 500);
+                                return text;
+                            }} />
+                        </View>
+                        
+                        <View style={{ flexDirection: 'row' }} >
+                            <AppTextInput leftActionPadding={40} leftActionComponent={<TouchableOpacity style={{ backgroundColor: !this.state.serverNotEqualFilter1 ? 'transparent' : Theme.colors.palette.primary, padding: 5, borderRadius: 5 }} onPress={() => {
+                                    this.setState(update(this.state, { serverNotEqualFilter1: {$set: !this.state.serverNotEqualFilter1} }), () => {
+                                        this.sendServerFilter();
+                                    });
+                                }} >
+                                    <FontAwesome5 name="not-equal" size={16} color={this.state.serverNotEqualFilter1 ? 'white' : Theme.colors.palette.primary} />
+                                </TouchableOpacity>} noClickAction={true} action="cloud-upload" actionDoneIcon="cloud-done-outline" actionLoading={this.state.metricServer1FilterLoading} actionComplete={this.state.metricServer1FilterComplete} onAction={async () => {
                                 this.sendServerFilter();
+                            }}
+                            ref={this.metricServer1FilterSearchBarRef} placeholder="Cloud metric filter 1 (regex)" style={{ width: 450, alignSelf: 'center', borderTop: 0, borderTopRightRadius: 0, borderBottomRightRadius: 0, borderTopLeftRadius: 0, fontFamily: 'Mono', fontWeight: 'bold'}} onChangeText={text => {
+
+                                if (this.state.forceLoading) return;
+
+                                clearTimeout(this.serverMetricFilterTimeout);
+
+                                //this.setState(update(this.state, { metricServerFilterTyping: {$set: true } }));
+
+                                this.serverMetricFilterTimeout = setTimeout(() => {
+                                    this.setState(update(this.state, { metricServerFilter1: {$set: text }, metricServerFilterTyping: {$set: false } }), () => {
+
+                                        //this.setState(update(this.state, { metricServer1FilterComplete: {$set: text === this.state.metricServer1FilterCompleteText } }));
+                                        this.sendServerFilter();
+                                    });
+                                }, 500);
+
+                                
+                                return text;
+                            }} />
+
+                            <AppTextInput leftActionPadding={40} leftActionComponent={<TouchableOpacity style={{ backgroundColor: !this.state.serverNotEqualFilter2 ? 'transparent' : Theme.colors.palette.primary, padding: 5, borderRadius: 5 }} onPress={() => {
+                                    this.setState(update(this.state, { serverNotEqualFilter2: {$set: !this.state.serverNotEqualFilter2} }), () => {
+                                        this.sendServerFilter();
+                                    });
+                                }} >
+                                    <FontAwesome5 name="not-equal" size={16} color={this.state.serverNotEqualFilter2 ? 'white' : Theme.colors.palette.primary} />
+                                </TouchableOpacity>} noClickAction={true} action="cloud-upload" actionDoneIcon="cloud-done-outline" actionLoading={this.state.metricServer1FilterLoading} actionComplete={this.state.metricServer1FilterComplete} onAction={async () => {
+                                this.sendServerFilter();
+                            }} ref={this.metricServer2FilterSearchBarRef} placeholder="Cloud metric filter 2 (regex)" style={{ width: 450, alignSelf: 'center', borderTop: 0, borderTopLeftRadius: 0, borderBottomLeftRadius: 0, borderTopRightRadius: 0, borderLeftWidth: 0, fontFamily: 'Mono', fontWeight: 'bold'}} onChangeText={text => {
+
+                                if (this.state.forceLoading) return;
+
+                                clearTimeout(this.serverMetricFilterTimeout);
+
+                                //this.setState(update(this.state, { metricServerFilterTyping: {$set: true } }));
+
+                                this.serverMetricFilterTimeout = setTimeout(() => {
+                                    this.setState(update(this.state, { metricServerFilter2: {$set: text }, metricServerFilterTyping: {$set: false } }), () => {
+
+                                        //this.setState(update(this.state, { metricServer1FilterComplete: {$set: text === this.state.metricServer1FilterCompleteText } }));
+                                        this.sendServerFilter();
+                                    });
+                                }, 500);
+
+                                
+                                return text;
+                            }} />
+                                <TouchableOpacity disabled={this.state.metricFilter1.length < 1 && this.state.metricServerFilter1.length < 1 && this.state.metricFilter2.length < 1 && this.state.metricServerFilter2.length < 1} style={{ padding: 5, borderRadius: 5 }} onPress={async () => {
+                                    await this.metricFilters.add({
+                                        metricFilter1: this.state.metricFilter1,
+                                        metricFilter2: this.state.metricFilter2,
+                                        metricServerFilter1: this.state.metricServerFilter1,
+                                        metricServerFilter2: this.state.metricServerFilter2,
+                                        notEqualFilter1: this.state.notEqualFilter1,
+                                        notEqualFilter2: this.state.notEqualFilter2,
+                                        serverNotEqualFilter1: this.state.serverNotEqualFilter1,
+                                        serverNotEqualFilter2: this.state.serverNotEqualFilter2
+                                    });
+                                }} >
+                                    <Ionicons name="save" size={24} color={(this.state.metricFilter1.length < 1 && this.state.metricServerFilter1.length < 1 && this.state.metricFilter2.length < 1 && this.state.metricServerFilter2.length < 1) ? 'gray' : Theme.colors.palette.primary} />
+                                </TouchableOpacity>
+                            
+                        </View>
+
+                        
+                    </View>
+
+                </View>
+
+                <View style={{ flexDirection: 'column' }} >
+                    <View style={{ alignSelf: 'center', flexDirection: 'row', alignItems: 'center' }} >
+                        <TouchableOpacity onPress={() => {
+                            this.setState(update(this.state, { groupByStatus: {$set: !this.state.groupByStatus} }), () => {
+                                this.renderCharts();
                             });
                         }} >
-                            <FontAwesome5 name="not-equal" size={16} color={this.state.serverNotEqualFilter ? 'white' : Theme.colors.palette.primary} />
+                            <MaterialCommunityIcons name={this.state.groupByStatus ? "checkbox-marked" : 'checkbox-blank-outline'} size={24} color={Theme.colors.palette.primary} />
                         </TouchableOpacity>
+                        <View style={{ width: 2 }} />
+                        <AppText>Group by status</AppText>
                     </View>
-                    
-                    <View style={{ width: 5 }} />
-                    <View >
-                        <AppTextInput action="arrow-down-circle" actionDisabled={this.state.metricFilter.length < 1} onAction={() => {
-                            this.metricServerFilterSearchBarRef.current?.setValue(this.state.metricFilter);
-                            this.metricFilterSearchBarRef.current?.setValue('');
-                            
-                        }} ref={this.metricFilterSearchBarRef} placeholder="Local metric filter (regex)" style={{ width: 400, alignSelf: 'center', borderBottomRightRadius: 0, borderBottomLeftRadius: 0, fontFamily: 'Mono', fontWeight: 'bold' }} onChangeText={text => {
 
-                            if (this.state.forceLoading) return;
+                    <AppPicker ref={this.metricTypeDropdownRef} disabled={this.state.forceLoading} options={[
+                        
+                        {
+                            id: 'rstd',
+                            name: 'By RSTD'
+                        },
+                        {
+                            id: 'max',
+                            name: 'By Max'
+                        },
+                        {
+                            id: 'rmax',
+                            name: 'By -Max'
+                        },
+                        {
+                            id: 'spike',
+                            name: 'By Spike'
+                        },
+                        {
+                            id: 'mean',
+                            name: 'By Mean'
+                        },
+                        {
+                            id: 'std',
+                            name: 'By STD'
+                        },
+                        {
+                            id: 'alpha',
+                            name: 'By A-Z'
+                        },
+                        {
+                            id: 'cardinality',
+                            name: 'By Cardinality'
+                        },
 
-                            clearTimeout(this.clientMetricFilterTimeout);
-                            
-                            this.clientMetricFilterTimeout = setTimeout(() => {
-                                this.setState(update(this.state, { metricFilter: {$set: text } }));
-                                this.renderCharts();
-                            }, 500);
-                            return text;
-                        }} />
-
-                        <AppTextInput noClickAction={true} action="cloud-upload" actionDoneIcon="cloud-done-outline" actionLoading={this.state.metricServerFilterLoading} actionComplete={this.state.metricServerFilterComplete} onAction={async () => {
-                            this.sendServerFilter();
-                        }} ref={this.metricServerFilterSearchBarRef} placeholder="Cloud metric filter (regex)" style={{ width: 400, alignSelf: 'center', borderTop: 0, borderTopRightRadius: 0, borderTopLeftRadius: 0, fontFamily: 'Mono', fontWeight: 'bold'}} onChangeText={text => {
-
-                            if (this.state.forceLoading) return;
-
-                            clearTimeout(this.serverMetricFilterTimeout);
-
-                            //this.setState(update(this.state, { metricServerFilterTyping: {$set: true } }));
-
-                            this.serverMetricFilterTimeout = setTimeout(() => {
-                                this.setState(update(this.state, { metricServerFilter: {$set: text }, metricServerFilterTyping: {$set: false } }), () => {
-
-                                    this.setState(update(this.state, { metricServerFilterComplete: {$set: text === this.state.metricServerFilterCompleteText } }));
-                                    this.sendServerFilter();
-                                });
-                            }, 1000);
-
-                            
-                            return text;
-                        }} />
-                    </View>
-                    
-                    <TouchableOpacity disabled={this.state.metricFilter.length < 1 && this.state.metricServerFilter.length < 1} style={{ padding: 5, borderRadius: 5 }} onPress={async () => {
-                        await this.metricFilters.add(this.state.metricFilter, this.state.metricServerFilter, { notEqual: this.state.notEqualFilter, serverNotEqual: this.state.serverNotEqualFilter });
-                    }} >
-                        <Ionicons name="save" size={24} color={(this.state.metricFilter.length < 1 && this.state.metricServerFilter.length < 1) ? 'gray' : Theme.colors.palette.primary} />
-                    </TouchableOpacity>
-                </View>
-
-                <View style={{ alignSelf: 'center', flexDirection: 'row', alignItems: 'center' }} >
-                    <TouchableOpacity onPress={() => {
-                        this.setState(update(this.state, { groupByStatus: {$set: !this.state.groupByStatus} }), () => {
-                            this.renderCharts();
+                    ]} currentOption={this.state.metricWeightPreference} onOptionChange={option => {
+                        this.setState(update(this.state, { metricWeightPreference: {$set: option}}), async () => {
+                            this.renderCharts(500);
                         });
-                    }} >
-                        <MaterialCommunityIcons name={this.state.groupByStatus ? "checkbox-marked" : 'checkbox-blank-outline'} size={24} color={Theme.colors.palette.primary} />
-                    </TouchableOpacity>
-                    <View style={{ width: 2 }} />
-                    <AppText>Group by status</AppText>
+
+                    }} pickerName="Sorting Weight Preference" />
                 </View>
 
-                <AppPicker ref={this.metricTypeDropdownRef} disabled={this.state.forceLoading} options={[
-                    
-                    {
-                        id: 'rstd',
-                        name: 'By RSTD'
-                    },
-                    {
-                        id: 'max',
-                        name: 'By Max'
-                    },
-                    {
-                        id: 'rmax',
-                        name: 'By -Max'
-                    },
-                    {
-                        id: 'spike',
-                        name: 'By Spike'
-                    },
-                    {
-                        id: 'mean',
-                        name: 'By Mean'
-                    },
-                    {
-                        id: 'std',
-                        name: 'By STD'
-                    },
-                    {
-                        id: 'alpha',
-                        name: 'By A-Z'
-                    },
-                    {
-                        id: 'cardinality',
-                        name: 'By Cardinality'
-                    },
-
-                ]} currentOption={this.state.metricWeightPreference} onOptionChange={option => {
-                    this.setState(update(this.state, { metricWeightPreference: {$set: option}}), async () => {
-                        this.renderCharts(500);
-                    });
-
-                }} pickerName="Sorting Weight Preference" />
+                
                 
                 {/* SEE NOTICE 1
                 <AppPicker ref={this.metricTypeDropdownRef} disabled={this.state.forceLoading} options={[
@@ -1178,7 +1369,12 @@ class Home extends Component {
                 <ScrollView showsHorizontalScrollIndicator={false} horizontal={true} style={{ height: Dimensions.get('window').height * 0.05, width: "100%" }}  >
                     <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'center' }} >
                         {this.state.metricFilters.map((filter, index) => {
-                            let selected = filter.preset ? filter.filter in this.state.filterPresets : this.state.metricFilter === filter.filter && this.state.metricServerFilter === filter.serverFilter && this.state.notEqualFilter === filter.notEqual && this.state.serverNotEqualFilter === filter.serverNotEqual;
+
+                            //console.log(filter.hash, this.state.filterHash)
+
+                            let selected = filter.preset ? filter.filter in this.state.filterPresets : filter.hash === this.state.filterHash;
+
+                            //!filter.preset && console.log("filter.hash", filter.hash)
 
                             let shouldDisplaySeparator = (this.state.metricFilters[index - 1]?.preset === true && !filter.preset) || filter.displaySeparator;
 
@@ -1214,41 +1410,52 @@ class Home extends Component {
                                             });
                                         }
                                     } else {
-                                        if ((this.state.metricFilter === filter.filter && this.state.metricServerFilter === filter.serverFilter) && this.state.notEqualFilter === filter.notEqual && this.state.serverNotEqualFilter === filter.serverNotEqual) {
-                                            this.setState(update(this.state, { metricFilter: {$set: ''}, metricServerFilter: {$set: ''}, notEqualFilter: {$set: false}, serverNotEqualFilter: {$set: false} }), () => {
+
+                                        if (filter.hash === this.state.filterHash) {
+                                            this.setState(update(this.state, { notEqualFilter1: {$set: false}, notEqualFilter2: {$set: false}, serverNotEqualFilter1: {$set: false}, serverNotEqualFilter2: {$set: false}, filterHash: {$set: null }}), () => {
                                                 //this.sendServerFilter();
-                                                this.metricFilterSearchBarRef.current?.setValue('');
-                                                this.metricServerFilterSearchBarRef.current?.setValue('');
+                                                this.metricFilter1SearchBarRef.current?.setValue('');
+                                                this.metricServer1FilterSearchBarRef.current?.setValue('');
+                                                this.metricFilter2SearchBarRef.current?.setValue('');
+                                                this.metricServer2FilterSearchBarRef.current?.setValue('');
                                                 this.renderCharts();
                                             })
                                             
                                         } else {
-                                            this.setState(update(this.state, { notEqualFilter: {$set: filter.notEqual}, serverNotEqualFilter: {$set: filter.serverNotEqual} }), () => {
-                                                this.metricFilterSearchBarRef.current?.setValue(filter.filter);
+
+                                            //console.log('filter', filter);
+
+                                            this.setState(update(this.state, { notEqualFilter1: {$set: filter.notEqualFilter1}, serverNotEqualFilter1: {$set: filter.serverNotEqualFilter1}, notEqualFilter2: {$set: filter.notEqualFilter2}, serverNotEqualFilter2: {$set: filter.serverNotEqualFilter2}, filterHash: {$set: filter.hash } }), () => {
+
+                                                this.metricFilter1SearchBarRef.current?.setValue(filter.metricFilter1);
+                                                this.metricFilter2SearchBarRef.current?.setValue(filter.metricFilter2);
+
+                                                this.metricServer1FilterSearchBarRef.current?.setValue(filter.metricServerFilter1);
+                                                
+
                                                 setTimeout(() => {
-                                                    this.metricServerFilterSearchBarRef.current?.setValue(filter.serverFilter);
-                                                    setTimeout(() => {
-                                                        //this.sendServerFilter();
-                                                        this.renderCharts();
-                                                    }, 0);
-                                                }, 0);
+                                                    
+                                                    this.metricServer2FilterSearchBarRef.current?.setValue(filter.metricServerFilter2);
+
+                                                }, 500);
+
+                                                this.renderCharts();
                                             })
                                         }
                                     }
                                     
                                 }} >
 
-                                    {!!filter.filter && <AppText style={{ color: selected ? 'white' : filter.preset ? Theme.colors.palette.primary : 'black'}} >{!filter.preset && <Ionicons name="laptop-outline" style={{marginRight: 5}} />}{!!filter.notEqual && <FontAwesome5 name="not-equal" size={11} color={selected ? 'white' : "gray"} style={{ alignSelf: 'center', marginRight: 5 }} />}{filter.name ?? filter.filter}</AppText>}
+                                    <AppText style={{ color: selected ? 'white' : filter.preset ? Theme.colors.palette.primary : 'black'}} >{filter.name}</AppText>
 
-                                    {!!filter.serverFilter && <AppText style={{ color: selected ? 'white' : 'black'}} >{!!filter.filter && <AppText> &middot; </AppText>}<Ionicons name="cloud-outline" style={{ marginRight: 3 }} /> {!!filter.serverNotEqual && <FontAwesome5 name="not-equal" size={11} color={selected ? 'white' : "gray"} style={{ alignSelf: 'center', marginRight: 5 }} />}{filter.serverFilter}</AppText>}
 
                                     {filter.preset !== true && <TouchableOpacity style={{ marginLeft: 5, marginBottom: -5 }} onPress={async () => {
                                         await this.metricFilters.remove(filter.filterCanonical);
                                         if (selected) {
-                                            this.setState(update(this.state, { metricFilter: {$set: ''}, metricServerFilter: {$set: ''} }), () => {
+                                            this.setState(update(this.state, { metricFilter1: {$set: ''}, metricServerFilter1: {$set: ''} }), () => {
                                                 this.sendServerFilter();
-                                                this.metricFilterSearchBarRef.current?.setValue('');
-                                                this.metricServerFilterSearchBarRef.current?.setValue('');
+                                                this.metricFilter1SearchBarRef.current?.setValue('');
+                                                this.metricServer1FilterSearchBarRef.current?.setValue('');
                                                 this.renderCharts();
                                             })
                                         }
@@ -1445,8 +1652,6 @@ class Home extends Component {
                 onLoad={async () => {
 
                     let figure;
-
-                    console.log(this.state.showInfoData);
 
                     if (this.state.showInfoData.chartB) {
 
@@ -1692,6 +1897,54 @@ class Home extends Component {
                     this.setState(update(this.state, {showHudInfo: {$set: false}}));
                 }}
             />
+
+            <HoverContextMenu 
+                options={[
+                    {
+                        id: 'save',
+                        name: 'Save',
+                        disabled: !this.state.metricFiltersCreateContext?.__saveName || this.state.metricFiltersCreateContext?.__saveName?.length < 1
+                    },
+                    {
+                        id: 'cancel',
+                        name: 'Cancel'
+                    }
+                ]}
+                headerComponent={() => {
+                    
+                    if (!this.state.metricFiltersCreateContext) return null;
+
+                    return <View style={{ alignItems: 'center', justifyContent: 'center', padding: 20, width: "100%" }} >
+                        <AppText tag="h2" >Save Filter</AppText>
+
+                        <View style={{ height: 5 }} />
+
+                        <AppText tag="p" >Local filter 1: {this.state.metricFiltersCreateContext.notEqualFilter1 && <FontAwesome5 name="not-equal" size={12} color="gray" />} {this.state.metricFiltersCreateContext.metricFilter1 || <AppText style={{ color: "gray", fontStyle: "italic" }} >none</AppText>}</AppText>
+
+                        <AppText tag="p" >Local filter 2: {this.state.metricFiltersCreateContext.notEqualFilter2 && <FontAwesome5 name="not-equal" size={12} color="gray" />} {this.state.metricFiltersCreateContext.metricFilter2 || <AppText style={{ color: "gray", fontStyle: "italic" }} >none</AppText>}</AppText>
+
+                        <AppText tag="p" >Cloud filter 1: {this.state.metricFiltersCreateContext.serverNotEqualFilter1 && <FontAwesome5 name="not-equal" size={12} color="gray" />} {this.state.metricFiltersCreateContext.metricServerFilter1 || <AppText style={{ color: "gray", fontStyle: "italic" }} >none</AppText>}</AppText>
+
+                        <AppText tag="p" >Cloud filter 2: {this.state.metricFiltersCreateContext.serverNotEqualFilter2 && <FontAwesome5 name="not-equal" size={12} color="gray" />} {this.state.metricFiltersCreateContext.metricServerFilter2 || <AppText style={{ color: "gray", fontStyle: "italic" }} >none</AppText>}</AppText>
+
+                        <View style={{ height: 5 }} />
+
+                        <AppTextInput style={{ paddingLeft: 5, paddingRight: 5, width: 400 }} placeholder="Give this filter a name..." onChangeText={text => {
+                            this.setState(update(this.state, { metricFiltersCreateContext: { __saveName : {$set: text}} }));
+                            return text;
+                        }} />
+                        
+                    </View>
+                }}
+                show={this.state.metricFiltersCreateContext}
+                onAction={action => {
+                    if (action === 'save') {
+                        //console.log("will return with", this.state.metricFiltersCreateContext);
+                        this.metricFilters.onReturnFromCreateContext({...this.state.metricFiltersCreateContext});
+                    }
+                    this.setState(update(this.state, {metricFiltersCreateContext: {$set: null}}));
+                }}
+            />
             
             
         </View>
@@ -1720,7 +1973,7 @@ class Home extends Component {
             </View>
         } else {
             return <View style={{ alignItems: 'center', marginTop: 20 }} >
-                <AppText tag="h4" style={{ alignSelf: 'center' }} >No metrics to display{this.state.metricFilter.length ? ' for this filter' : ''}</AppText>
+                <AppText tag="h4" style={{ alignSelf: 'center' }} >No metrics to display{this.state.metricFilter1.length ? ' for this filter' : ''}</AppText>
                 <View style={{ height: 10 }} />
 
                 <Button name={"Change the metric type"} icon={{name: "swap-horizontal"}} onPress={() => {
